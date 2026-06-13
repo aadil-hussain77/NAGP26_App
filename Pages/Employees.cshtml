@@ -1,0 +1,58 @@
+@page 
+@model NAGP26_App.Pages.EmployeesModel
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Employees</title>
+    <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+    <div id="app">
+        <h1>Employees</h1>
+        <div>
+            <button id="btn-refresh">Refresh</button>
+            <button id="btn-new">New Employee</button>
+        </div>
+
+        <div id="employee-form" style="display:none;">
+            <h3 id="form-title">New Employee</h3>
+            <form id="form">
+                <input type="hidden" id="EmployeeId" />
+                <div><label>Employee Code</label><input id="EmployeeCode"/></div>
+                <div><label>First Name</label><input id="FirstName"/></div>
+                <div><label>Last Name</label><input id="LastName"/></div>
+                <div><label>Email</label><input id="Email"/></div>
+                <div><label>Contact No</label><input id="ContactNo"/></div>
+                <div><label>Department</label><input id="Department"/></div>
+                <div><label>Designation</label><input id="Designation"/></div>
+                <div><label>Is Active</label><input type="checkbox" id="IsActive" checked/></div>
+                <div>
+                    <button type="submit">Save</button>
+                    <button type="button" id="btn-cancel">Cancel</button>
+                </div>
+            </form>
+        </div>
+
+        <table border="1" id="employees-table">
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Contact</th>
+                    <th>Department</th>
+                    <th>Designation</th>
+                    <th>Active</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script src="/js/employees.js"></script>
+</body>
+</html>
