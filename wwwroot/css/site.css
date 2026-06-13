@@ -21,6 +21,46 @@ body {
   margin-bottom: 60px;
 }
 
+/* Small aesthetic improvements for the employee page */
+body {
+  background-color: #f8fafc;
+}
+
+/* Card & table */
+.card {
+  border-radius: 8px;
+}
+
+.table thead th {
+  vertical-align: middle;
+}
+
+.table tbody td {
+  vertical-align: middle;
+  font-size: 0.95rem;
+}
+
+/* Modal improvements */
+.modal .form-label {
+  font-weight: 500;
+}
+
+.modal .form-control {
+  box-shadow: none;
+}
+
+/* Buttons */
+.btn-primary {
+  background-color: #2563eb;
+  border-color: #2563eb;
+}
+
+/* Make badges look a bit cleaner */
+.badge {
+  font-size: 0.85em;
+  padding: 0.35em 0.6em;
+}
+
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
   color: var(--bs-secondary-color);
   text-align: end;

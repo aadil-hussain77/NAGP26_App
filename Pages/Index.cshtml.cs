@@ -5,9 +5,9 @@ namespace NAGP26_App.Pages
 {
     public class IndexModel : PageModel
     {
-        public void OnGet()
+        public IActionResult OnGet()
         {
-
+            return RedirectToPage("/Employees");
         }
     }
 }

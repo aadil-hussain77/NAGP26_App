@@ -1,0 +1,388 @@
+GCP Deployment & Multi?Tier Design for NAGP26_App
+===============================================
+
+Goal
+----
+Deploy the existing Razor Pages + API application as a multi?tier system on Google Cloud Platform (GKE). Keep presentation (static) separated from the API, and the API separated from the database. Meet the non?functional requirements: connection pooling, config separation, rolling updates, external access via Ingress, persistence, database accessible only within the cluster, automatic recovery.
+
+Assumptions
+-----------
+- No code changes will be made.
+- Kubernetes cluster will be GKE (recommended: GKE Standard with private cluster).
+- CI/CD will use GitHub Actions (examples shown below). You may adapt to Cloud Build, Cloud Deploy, or any CI.
+
+High level architecture (updated)
+-----------------------
+- Frontend (static): build static assets from the project (wwwroot) and deploy to Google Cloud Storage + serve via Cloud CDN (HTTPS). This is independent and can be cached globally.
+- API (service) tier: containerized .NET 8 service running in GKE behind an Ingress (external). Deployment configured with 4 replicas, readiness/liveness probes, rolling updates enabled, and resource requests/limits. Connects to the in?cluster SQL Server via a Kubernetes Service (ClusterIP).
+- Database tier (UPDATED): a SQL Server instance running inside the cluster as a StatefulSet with a PersistentVolumeClaim for /var/opt/mssql. Single pod (replica count = 1). A headless or ClusterIP Service provides a stable DNS name for the API tier to connect. Initial schema and seed (5–10 Employee records) are loaded via an init job or an init container on first boot.
+
+Why in?cluster StatefulSet
+- Meets requirement to run DB inside the cluster with persistent storage.
+- Ensures data persistence via PVCs (backed by GCE PD); PVCs survive pod recreation so data is retained across pod restart/deletion.
+- Using a StatefulSet gives stable volume claim templates and predictable identity, but because there's one replica, primary concerns about clustering are reduced.
+
+Important tradeoffs
+- Running a database inside Kubernetes adds operational burden (backup/restore, high availability) compared to managed Cloud SQL. This design documents backup and restore strategies to mitigate risk.
+
+Security & networking (updated)
+---------------------
+- Use a Private GKE cluster or VPC?native GKE with private nodes (recommended).
+- The in?cluster database is only exposed via a Kubernetes Service (ClusterIP). The API connects using the service DNS name (not pod IPs): `nagp26-sql.nagp26.svc.cluster.local`.
+- Use Kubernetes Secrets for DB SA password. Do NOT store credentials in plain YAML in Git. For GitOps, use sealed-secrets or External Secrets Operator backed by Secret Manager.
+- Use NetworkPolicies to restrict access: only the API deployment's pods may connect to the DB Service on SQL port (1433).
+
+Configuration separation (unchanged)
+------------------------------------
+- Use ConfigMap for non-sensitive configuration: e.g. `APP_ENV`, `ASPNETCORE_ENVIRONMENT`, `DB_HOST` (service name), `DB_NAME`, `DB_MAXPOOL`.
+- Use Kubernetes Secret for DB credentials (username/password). The application reads connection string parts from environment variables via `IConfiguration` (builder.Configuration). The API pod will assemble the connection string from ConfigMap + Secret values.
+
+Connection pooling (unchanged)
+------------------
+- The app already registers DbContext pooling (`AddDbContextPool<AppDbContext>`) — keep this.
+- Use ADO.NET connection string pooling parameters appropriate for SQL Server (e.g., `Max Pool Size=100;Min Pool Size=0;`). Tune based on replica count and expected concurrency.
+
+Kubernetes artifacts (Stateful DB additions)
+-------------------------------------------
+Use Helm or Kustomize for templating. Below are example manifests to run a single?pod SQL Server with persistent storage and initial seeding.
+
+1) Namespace (same as before)
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nagp26
+```
+
+2) Secret — DB SA password (do not check into Git)
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sql-credentials
+  namespace: nagp26
+type: Opaque
+stringData:
+  DB_USER: "sa"
+  DB_PASSWORD: "<<REPLACE_WITH_STRONG_PASSWORD>>"
+```
+
+3) ConfigMap — optional, holds DB name and other non-sensitive settings
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-config
+  namespace: nagp26
+data:
+  DB_NAME: "NAGP26_DB"
+  DB_MAXPOOL: "100"
+  DB_MINPOOL: "0"
+```
+
+4) Service (ClusterIP) for the DB — stable DNS for API
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nagp26-sql
+  namespace: nagp26
+spec:
+  ports:
+    - port: 1433
+      targetPort: 1433
+      protocol: TCP
+      name: mssql
+  selector:
+    app: nagp26-sql
+  type: ClusterIP
+```
+
+5) PersistentVolumeClaim template and StatefulSet for SQL Server
+(Use StorageClass `standard-rwo` or a regional PD StorageClass depending on SLA needs.)
+
+```yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nagp26-sql
+  namespace: nagp26
+spec:
+  serviceName: "nagp26-sql"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nagp26-sql
+  template:
+    metadata:
+      labels:
+        app: nagp26-sql
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: mssql
+          image: mcr.microsoft.com/mssql/server:2022-latest
+          ports:
+            - containerPort: 1433
+          env:
+            - name: ACCEPT_EULA
+              value: "Y"
+            - name: MSSQL_PID
+              value: "Express"
+            - name: MSSQL_SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sql-credentials
+                  key: DB_PASSWORD
+            - name: MSSQL_TCP_PORT
+              value: "1433"
+          volumeMounts:
+            - name: mssqldata
+              mountPath: /var/opt/mssql
+          readinessProbe:
+            tcpSocket:
+              port: 1433
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 1433
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "4Gi"
+  volumeClaimTemplates:
+    - metadata:
+        name: mssqldata
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: "standard-rwo"
+        resources:
+          requests:
+            storage: 50Gi
+```
+Notes:
+- `volumeClaimTemplates` ensures a PVC is created per pod and is bound to the pod. If pod is deleted and recreated, the PVC is re-attached preserving data.
+- Use a `StorageClass` that supports regional PD or multi-zone replication for higher durability.
+- Set `reclaimPolicy` to `Retain` if you need to ensure PVs survive deletion of the PVC (modify StorageClass if necessary).
+
+6) Init Job / Init Container to create database, schema and seed records
+Since we must include 5–10 Employee records on the DB, deploy a Kubernetes Job that runs once and executes a SQL script against the SQL Server pod to create the `NAGP26_DB` database, `Employee` table and seed rows.
+
+- Create a ConfigMap containing the init SQL script `init.sql`.
+- Create a Job that runs a small container with `mssql-tools` to exec the script against the service DNS name `nagp26-sql:1433`. The Job should wait until the StatefulSet readiness probe passes.
+
+Example ConfigMap with SQL (partial):
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-init-sql
+  namespace: nagp26
+data:
+  init.sql: |
+    CREATE DATABASE IF NOT EXISTS NAGP26_DB;
+    GO
+    USE NAGP26_DB;
+    GO
+    -- Create Employee table (script adapted for SQL Server)
+    IF OBJECT_ID('dbo.Employee', 'U') IS NULL
+    BEGIN
+      CREATE TABLE dbo.Employee (
+        EmployeeId BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        EmployeeCode VARCHAR(20) NOT NULL,
+        FirstName NVARCHAR(100) NOT NULL,
+        LastName NVARCHAR(100) NOT NULL,
+        Email NVARCHAR(255) NOT NULL,
+        ContactNo VARCHAR(15) NOT NULL,
+        Department NVARCHAR(100) NOT NULL,
+        Designation NVARCHAR(100) NOT NULL,
+        IsActive BIT NOT NULL DEFAULT (1),
+        CreatedAt DATETIME2(3) NOT NULL DEFAULT (SYSUTCDATETIME()),
+        UpdatedAt DATETIME2(3) NOT NULL DEFAULT (SYSUTCDATETIME())
+      );
+    END
+    GO
+    -- Insert 5 sample rows
+    INSERT INTO dbo.Employee (EmployeeCode, FirstName, LastName, Email, ContactNo, Department, Designation, IsActive)
+    VALUES
+      ('E001','John','Doe','john.doe@example.com','1234567890','HR','Manager',1),
+      ('E002','Jane','Smith','jane.smith@example.com','1234567891','IT','Developer',1),
+      ('E003','Bob','Brown','bob.brown@example.com','1234567892','Finance','Accountant',1),
+      ('E004','Alice','Green','alice.green@example.com','1234567893','Marketing','Executive',1),
+      ('E005','Tom','White','tom.white@example.com','1234567894','IT','DevOps',1);
+    GO
+```
+
+Job to apply script (conceptual):
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-init-job
+  namespace: nagp26
+spec:
+  backoffLimit: 4
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: db-init
+          image: mcr.microsoft.com/mssql-tools
+          command: ["/bin/sh","-c"]
+          args:
+            - |
+              # wait for SQL to be ready
+              for i in $(seq 1 60); do
+                nc -z nagp26-sql 1433 && break
+                echo waiting for sql
+                sleep 5
+              done
+              /opt/mssql-tools/bin/sqlcmd -S nagp26-sql -U sa -P "$DB_PASSWORD" -i /scripts/init.sql
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sql-credentials
+                  key: DB_PASSWORD
+          volumeMounts:
+            - name: init-sql
+              mountPath: /scripts
+      volumes:
+        - name: init-sql
+          configMap:
+            name: db-init-sql
+```
+Notes:
+- The Job uses `sqlcmd` from `mssql-tools`. You may need to use a small Alpine image with `mssql-tools` installed or build a helper image.
+- The Job should be idempotent. Use `IF NOT EXISTS` checks in SQL or wrap operations.
+- Make sure the SA password secret is available to the Job.
+
+7) NetworkPolicy to restrict DB access to API pods only
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: db-allow-api
+  namespace: nagp26
+spec:
+  podSelector:
+    matchLabels:
+      app: nagp26-sql
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: nagp26-api
+      ports:
+        - protocol: TCP
+          port: 1433
+  policyTypes:
+    - Ingress
+```
+
+8) Backups & restore strategy (important)
+- Use one of the following approaches:
+  1. Volume snapshots (GCE PD snapshots) scheduled regularly. This captures PV contents. Use VolumeSnapshot CRD and CSI driver to snapshot PVCs to GCP snapshot storage.
+  2. Database-level backups: schedule a CronJob in Kubernetes that connects to SQL Server and runs `BACKUP DATABASE` to a backup file stored on a mounted PVC, then upload the backup to a GCS bucket. Use the SA password from Secret.
+  3. Use Velero (with GCP plugin) to snapshot PVs and backup Kubernetes resources. Note: Velero PV snapshot support varies by CSI driver and GCP StorageClass.
+
+Recommended: combine (2) and (1) for defense in depth — run scheduled DB backups to GCS and optionally snapshot PVCs.
+
+Example CronJob (conceptual) to run nightly backups and upload to GCS:
+```yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mssql-backup
+  namespace: nagp26
+spec:
+  schedule: "0 2 * * *"  # daily at 02:00
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: mssql-backup
+              image: myorg/mssql-backup:latest
+              env:
+                - name: DB_HOST
+                  value: "nagp26-sql"
+                - name: DB_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: sql-credentials
+                      key: DB_USER
+                - name: DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: sql-credentials
+                      key: DB_PASSWORD
+                - name: GCS_BUCKET
+                  value: my-backups-bucket
+          restartPolicy: OnFailure
+```
+Backup container should run `sqlcmd` to create `.bak` file and upload to GCS using service account credentials (via Workload Identity or mounted key). Ensure retention policy in GCS bucket.
+
+9) Persistence & PVC retention
+- Use StorageClass with `reclaimPolicy: Retain` if you want PVs to survive PVC deletion manually. Otherwise, default `Delete` will remove underlying PD when PVC removed.
+- Don't delete PVCs to keep data safe when DB pod is redeployed.
+
+10) Connectivity from API to DB (how to configure)
+- Set `DB_HOST` in the API ConfigMap to `nagp26-sql` (service name). The app should not rely on pod IPs.
+- Secrets: pass DB username/password via Secret to API pods. The app will assemble connection string from environment variables. Example connection string format for SQL Server:
+  Server=tcp:${DB_HOST},1433;Database=${DB_NAME};User Id=${DB_USER};Password=${DB_PASSWORD};TrustServerCertificate=true;Max Pool Size=100;
+
+11) Rolling updates and no DB rolling updates
+- API Deployment uses RollingUpdate as before (maxSurge:1, maxUnavailable:0).
+- For database StatefulSet, set `rollingUpdate` partitioning carefully or use `OnDelete` update strategy to avoid automatic rolling restarts. Because requirement specifies `rolling update support: no` for DB tier, set the StatefulSet `updateStrategy` to `OnDelete` to prevent automatic rolling updates. This gives control over when to restart or update DB pod.
+
+```yaml
+spec:
+  updateStrategy:
+    type: OnDelete
+```
+
+12) Health and readiness for DB
+- Use TCP readiness and liveness probes (port 1433) and consider a custom script probe that runs a lightweight SQL query to confirm DB is responsive.
+
+13) Autoscaling
+- Database replica count is 1 (no HPA). API tier uses HPA if needed.
+
+14) Operational playbook
+- How to restore from backup: create new PV/PVC, restore .bak to SQL Server using `RESTORE DATABASE`, point API ConfigMap to new DB host (service), or re-attach PV to StatefulSet.
+- How to upgrade DB image: perform manual maintenance window: scale down API, take backup, delete DB pod to recreate (or perform controlled update), validate data and restore replicas.
+
+CI/CD pipeline changes for DB
+----------------------------
+- Add a step in CI or post-deploy pipeline to run the DB init Job in staging and production only once: e.g., `kubectl apply -f db-init-job.yaml` and wait for completion, or run a job controller that runs SQL only if schema not present.
+- For production, only run seed data in staging; production seeding should be controlled and idempotent.
+
+Validation checklist (updated)
+----------------------------
+- PVCs are bound and use a durable StorageClass.
+- StatefulSet `updateStrategy: OnDelete` to avoid unintended rolling updates.
+- DB Service `nagp26-sql` is ClusterIP and only accessible within cluster; NetworkPolicy restricts access to API pods.
+- Backup CronJob or snapshot schedules are configured and tested.
+- Secrets are stored securely and not present in plain text in Git.
+- API ConfigMap points to service name `nagp26-sql` and not pod IPs.
+
+Deliverables (updated)
+----------------------
+- Kubernetes manifests for Namespace, Secret, ConfigMap, Service, StatefulSet, PVC template, Init ConfigMap (init.sql), Init Job, NetworkPolicy, CronJob for backups.
+- Helm chart packaging the above and templating `replicas`, `storageClass`, `storageSize`, `saPasswordSecret` etc.
+- CI job to run DB init in staging and tools/commands to restore backups.
+
+Notes & rationale (updated)
+---------------------------
+- Running DB inside Kubernetes meets the new requirement but increases operational responsibilities.
+- StatefulSet + PVC ensures data persistence and re-attachment when the pod is re-created (automatic recovery after pod deletion).
+- Using `OnDelete` update strategy gives manual control over DB updates and satisfies the requirement "rolling update support: no" for the DB tier.
+- Seeding via Job/ConfigMap ensures initial data (5–10 employees) without changing application code.
+
+File updated: this document (DESIGN_DEPLOYMENT_GCP.md) - contains manifests and best practices for in?cluster SQL Server deployment with persistence, seeding, backups, and restricted access.

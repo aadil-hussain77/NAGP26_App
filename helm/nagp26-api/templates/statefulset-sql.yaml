@@ -1,0 +1,80 @@
+{{- if .Values.sql.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nagp26-sql
+spec:
+  serviceName: "nagp26-sql"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nagp26-sql
+  updateStrategy:
+    type: OnDelete
+  template:
+    metadata:
+      labels:
+        app: nagp26-sql
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: mssql
+          image: {{ .Values.sql.image }}
+          ports:
+            - containerPort: 1433
+          env:
+            - name: ACCEPT_EULA
+              value: "Y"
+            - name: MSSQL_PID
+              value: "Express"
+            - name: MSSQL_SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sql-credentials
+                  key: DB_PASSWORD
+            - name: MSSQL_TCP_PORT
+              value: "1433"
+          volumeMounts:
+            - name: mssqldata
+              mountPath: /var/opt/mssql
+          readinessProbe:
+            tcpSocket:
+              port: 1433
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 1433
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "4Gi"
+  volumeClaimTemplates:
+    - metadata:
+        name: mssqldata
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: {{ .Values.sql.storage.storageClass | quote }}
+        resources:
+          requests:
+            storage: {{ .Values.sql.storage.size }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nagp26-sql
+spec:
+  ports:
+    - port: 1433
+      targetPort: 1433
+      protocol: TCP
+      name: mssql
+  selector:
+    app: nagp26-sql
+  type: ClusterIP
+{{- end }}

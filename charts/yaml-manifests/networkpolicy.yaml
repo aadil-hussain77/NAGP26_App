@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: db-allow-api
+  namespace: nagp26
+spec:
+  podSelector:
+    matchLabels:
+      app: nagp26-sql
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: nagp26-api
+      ports:
+        - protocol: TCP
+          port: 1433
+  policyTypes:
+    - Ingress

@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nagp26-ingress
+  namespace: nagp26
+  annotations:
+    kubernetes.io/ingress.class: gce
+spec:
+  rules:
+    - host: employees-api.nagap26.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nagp26-api
+                port:
+                  number: 80

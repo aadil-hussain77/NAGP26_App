@@ -1,0 +1,50 @@
+replicaCount: 4
+image:
+  repository: aadil77/nagp26-app
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  host: employees-api.nagap26.com
+
+resources:
+  requests:
+    cpu: "250m"
+    memory: "512Mi"
+  limits:
+    cpu: "1000m"
+    memory: "1Gi"
+
+sql:
+  enabled: true
+  image: mcr.microsoft.com/mssql/server:2022-latest
+  storage:
+    size: 10Gi
+    storageClass: standard
+    maxPool: 100
+    minPool: 0
+  saUser: sa
+  # SA password should be provided via sealed secret or external secrets in production
+  saPassword: "REPLACE_ME"
+  dbName: NAGP26_DB
+  init:
+    enabled: true
+  backup:
+    enabled: false
+    schedule: "0 2 * * *"
+    image: myorg/mssql-backup:latest
+    gcsBucket: my-backups-bucket
+
+initJob:
+  enabled: true
+
+hpa:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 50

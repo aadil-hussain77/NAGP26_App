@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-config
+  namespace: nagp26
+data:
+  DB_NAME: "NAGP26_DB"
+  DB_MAXPOOL: "100"
+  DB_MINPOOL: "0"
