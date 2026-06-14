@@ -3,13 +3,12 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # copy csproj and restore as distinct layers
-COPY NAGP26_App/*.csproj ./NAGP26_App/
-RUN dotnet restore ./NAGP26_App/NAGP26_App.csproj
+COPY NAGP26_App.csproj ./
+RUN dotnet restore ./NAGP26_App.csproj
 
 # copy everything else and build
 COPY . .
-WORKDIR /src/NAGP26_App
-RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish ./NAGP26_App.csproj -c Release -o /app/publish /p:UseAppHost=false
 
 # Runtime image
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
@@ -24,4 +23,4 @@ COPY --from=build /app/publish ./
 RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /app
 USER appuser
 
-ENTRYPOINT ["dotnet", "NAGP26_App.dll"]
+ENTRYPOINT ["dotnet", "NAGP26_App.dll"]ENTRYPOINT ["dotnet", "NAGP26_App.dll"]
