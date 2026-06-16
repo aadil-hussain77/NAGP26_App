@@ -71,17 +71,28 @@ jobs:
           location: ${{ secrets.GKE_ZONE }}
           project_id: ${{ secrets.GCP_PROJECT }}
 
-      - name: Ensure namespace exists
+      - name: Prepare Helm release resources
         run: |
-          echo "Ensuring namespace 'nagp26' exists..."
-          kubectl create namespace nagp26 --dry-run=client -o yaml | kubectl apply -f -
-
-      - name: Create/Update DB credentials secret (Kubernetes)
-        run: |
-          kubectl -n nagp26 create secret generic sql-credentials \
-            --from-literal=DB_USER='${{ secrets.SQL_DB_USER }}' \
-            --from-literal=DB_PASSWORD='${{ secrets.SQL_DB_PASSWORD }}' \
-            --dry-run=client -o yaml | kubectl apply -f -
+          echo "Preparing Helm resources for release 'nagp26' in namespace 'nagp26'..."
+          if kubectl get namespace nagp26 >/dev/null 2>&1; then
+            if kubectl get secret sql-credentials -n nagp26 >/dev/null 2>&1; then
+              echo "Found existing secret 'sql-credentials' - checking Helm metadata..."
+              managed_by=$(kubectl get secret sql-credentials -n nagp26 -o jsonpath='{.metadata.labels.app\.kubernetes\.io/managed-by}' 2>/dev/null || true)
+              release_name=$(kubectl get secret sql-credentials -n nagp26 -o jsonpath='{.metadata.annotations.meta\.helm\.sh/release-name}' 2>/dev/null || true)
+              release_ns=$(kubectl get secret sql-credentials -n nagp26 -o jsonpath='{.metadata.annotations.meta\.helm\.sh/release-namespace}' 2>/dev/null || true)
+              echo "labels.managed-by=$managed_by release-name=$release_name release-namespace=$release_ns"
+              if [ "$managed_by" != "Helm" ] || [ "$release_name" != "nagp26" ] || [ "$release_ns" != "nagp26" ]; then
+                echo "Secret exists but is not managed by Helm for this release — deleting so Helm can create it"
+                kubectl delete secret sql-credentials -n nagp26 || true
+              else
+                echo "Secret is already managed by Helm release 'nagp26' — leaving in place"
+              fi
+            else
+              echo "No existing 'sql-credentials' secret found — OK (Helm will create it)"
+            fi
+          else
+            echo "Namespace 'nagp26' not present — OK (Helm will create namespace and secret)"
+          fi
 
       - name: Deploy (Helm)
         if: ${{ github.event_name == 'push' || inputs.deploy_method == 'helm' }}
