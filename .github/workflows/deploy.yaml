@@ -71,6 +71,11 @@ jobs:
           location: ${{ secrets.GKE_ZONE }}
           project_id: ${{ secrets.GCP_PROJECT }}
 
+      - name: Ensure namespace exists
+        run: |
+          echo "Ensuring namespace 'nagp26' exists..."
+          kubectl create namespace nagp26 --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Create/Update DB credentials secret (Kubernetes)
         run: |
           kubectl -n nagp26 create secret generic sql-credentials \
