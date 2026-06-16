@@ -10,6 +10,7 @@ service:
 
 ingress:
   enabled: true
+  className: gce
   host: employees-api.nagap26.com
 
 resources:
@@ -44,7 +45,7 @@ initJob:
   enabled: true
 
 hpa:
-  enabled: false
-  minReplicas: 2
+  enabled: true
+  minReplicas: 4
   maxReplicas: 10
   targetCPUUtilizationPercentage: 50

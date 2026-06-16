@@ -6,9 +6,31 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Configuration: connection string should come from environment in container/K8s
 var configuration = builder.Configuration;
-var connectionString = configuration.GetConnectionString("DefaultConnection")
-                       ?? Environment.GetEnvironmentVariable("DefaultConnection")
-                       ?? "Server=(localdb)\\mssqllocaldb;Database=NAGP26_DB;Trusted_Connection=True;MultipleActiveResultSets=true";
+static string? GetEnv(string key) => Environment.GetEnvironmentVariable(key);
+
+static string? BuildSqlConnectionStringFromParts()
+{
+    var server = GetEnv("DB_SERVER");
+    var database = GetEnv("DB_NAME");
+    var user = GetEnv("DB_USER");
+    var password = GetEnv("DB_PASSWORD");
+
+    if (string.IsNullOrWhiteSpace(server) ||
+        string.IsNullOrWhiteSpace(database) ||
+        string.IsNullOrWhiteSpace(user) ||
+        string.IsNullOrWhiteSpace(password))
+    {
+        return null;
+    }
+
+    return $"Server={server};Database={database};User Id={user};Password={password};TrustServerCertificate=true;";
+}
+
+var connectionString =
+    configuration.GetConnectionString("DefaultConnection")
+    ?? GetEnv("DefaultConnection")
+    ?? BuildSqlConnectionStringFromParts()
+    ?? "Server=(localdb)\\mssqllocaldb;Database=NAGP26_DB;Trusted_Connection=True;MultipleActiveResultSets=true";
 
 // Add services to the container.
 builder.Services.AddRazorPages();

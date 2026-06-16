@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-db-config
+data:
+  DB_SERVER: "nagp26-sql"
+  DB_NAME: "NAGP26_DB"

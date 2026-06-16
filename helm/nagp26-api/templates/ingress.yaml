@@ -3,9 +3,10 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ include "nagp26-api.fullname" . }}-ingress
-  annotations:
-    kubernetes.io/ingress.class: "gce"
 spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className | quote }}
+  {{- end }}
   rules:
     - host: {{ .Values.ingress.host }}
       http:

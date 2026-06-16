@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: nagp26-app
 spec:
-  replicas: 2
+  replicas: 4
   selector:
     matchLabels:
       app: nagp26-app
@@ -20,11 +20,26 @@ spec:
           env:
             - name: ASPNETCORE_URLS
               value: "http://+:80"
-            - name: DefaultConnection
+            - name: DB_SERVER
+              valueFrom:
+                configMapKeyRef:
+                  name: api-db-config
+                  key: DB_SERVER
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: api-db-config
+                  key: DB_NAME
+            - name: DB_USER
               valueFrom:
                 secretKeyRef:
-                  name: sql-conn
-                  key: connectionString
+                  name: sql-credentials
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sql-credentials
+                  key: DB_PASSWORD
           readinessProbe:
             httpGet:
               path: /api/employees
@@ -37,13 +52,19 @@ spec:
               port: 80
             initialDelaySeconds: 15
             periodSeconds: 20
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "300m"
+              memory: "256Mi"
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: nagp26-app
 spec:
-  type: LoadBalancer
   ports:
     - port: 80
       targetPort: 80
@@ -59,7 +80,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: nagp26-app
-  minReplicas: 2
+  minReplicas: 4
   maxReplicas: 5
   metrics:
     - type: Resource

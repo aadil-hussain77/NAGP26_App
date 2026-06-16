@@ -3,6 +3,16 @@ name: CI/CD
 on:
   push:
     branches: [ master ]
+  workflow_dispatch:
+    inputs:
+      deploy_method:
+        description: "Deployment method: helm or k8s"
+        required: true
+        default: "helm"
+        type: choice
+        options:
+          - helm
+          - k8s
 
 jobs:
   build-and-deploy:
@@ -49,6 +59,24 @@ jobs:
           cluster_name: ${{ secrets.GKE_CLUSTER }}
           location: ${{ secrets.GKE_ZONE }}
 
-      - name: Deploy Helm chart
+      - name: Create/Update DB credentials secret (Kubernetes)
         run: |
-          helm upgrade --install nagp26 ./helm/nagp26-api --namespace nagp26 --create-namespace --set image.repository=aadil77/nagp26-app --set image.tag=latest
+          kubectl -n nagp26 create secret generic sql-credentials \
+            --from-literal=DB_USER='${{ secrets.SQL_DB_USER }}' \
+            --from-literal=DB_PASSWORD='${{ secrets.SQL_DB_PASSWORD }}' \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy (Helm)
+        if: ${{ github.event_name == 'push' || inputs.deploy_method == 'helm' }}
+        run: |
+          helm upgrade --install nagp26 ./helm/nagp26-api \
+            --namespace nagp26 --create-namespace \
+            --set image.repository=aadil77/nagp26-app \
+            --set image.tag=latest \
+            --set sql.saUser='${{ secrets.SQL_DB_USER }}' \
+            --set sql.saPassword='${{ secrets.SQL_DB_PASSWORD }}'
+
+      - name: Deploy (Raw Kubernetes YAML)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_method == 'k8s' }}
+        run: |
+          kubectl apply -f k8s/
