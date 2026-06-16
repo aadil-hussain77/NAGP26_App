@@ -54,6 +54,16 @@ jobs:
           project_id: ${{ secrets.GCP_PROJECT }}
           export_default_credentials: true
 
+      - name: Validate GCP inputs
+        run: |
+          echo "Validating required GCP inputs..."
+          if [ -z "${{ secrets.GCP_PROJECT }}" ]; then echo "ERROR: GCP_PROJECT secret is empty" && exit 1; fi
+          if [ -z "${{ secrets.GKE_CLUSTER }}" ]; then echo "ERROR: GKE_CLUSTER secret is empty" && exit 1; fi
+          if [ -z "${{ secrets.GKE_ZONE }}" ]; then echo "ERROR: GKE_ZONE secret is empty" && exit 1; fi
+          echo "gcloud configured project: $(gcloud config get-value project 2>/dev/null || echo '<none>')"
+          echo "Listing GKE clusters in project/zone for quick verification..."
+          gcloud container clusters list --project="${{ secrets.GCP_PROJECT }}" --zone="${{ secrets.GKE_ZONE }}" || true
+
       - name: Configure kubectl
         uses: google-github-actions/get-gke-credentials@v2
         with:
