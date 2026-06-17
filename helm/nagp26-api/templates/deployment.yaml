@@ -47,13 +47,13 @@ spec:
                   key: DB_PASSWORD
           readinessProbe:
             httpGet:
-              path: /api/employees
+              path: /healthz
               port: {{ .Values.service.port }}
             initialDelaySeconds: 20
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /api/employees
+              path: /healthz
               port: {{ .Values.service.port }}
             initialDelaySeconds: 45
             periodSeconds: 20

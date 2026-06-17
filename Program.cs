@@ -71,6 +71,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.MapGet("/healthz", () => Results.Ok(new { status = "ok" }));
+
 // Minimal APIs for Employee CRUD
 app.MapGet("/api/employees", async (NAGP26_App.Data.AppDbContext db) =>
 {

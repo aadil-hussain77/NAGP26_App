@@ -15,11 +15,11 @@ spec:
           args:
             - |
               for i in $(seq 1 60); do
-                /opt/mssql-tools18/bin/sqlcmd -S "nagp26-sql" -U "sa" -P "$SA_PASSWORD" -C -Q "SELECT 1" >/dev/null 2>&1 && break
+                /opt/mssql-tools/bin/sqlcmd -S "nagp26-sql" -U "sa" -P "$SA_PASSWORD" -C -Q "SELECT 1" >/dev/null 2>&1 && break
                 echo waiting for sql
                 sleep 5
               done
-              /opt/mssql-tools18/bin/sqlcmd -S "nagp26-sql" -U "sa" -P "$SA_PASSWORD" -C -b -Q "
+              /opt/mssql-tools/bin/sqlcmd -S "nagp26-sql" -U "sa" -P "$SA_PASSWORD" -C -b -Q "
               IF DB_ID('${DB_NAME}') IS NULL BEGIN
                 EXEC('CREATE DATABASE [' + '${DB_NAME}' + ']');
               END;
@@ -80,39 +80,3 @@ spec:
                 secretKeyRef:
                   name: sql-credentials
                   key: SA_PASSWORD
-
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: db-init-job
-  namespace: nagp26
-spec:
-  backoffLimit: 4
-  template:
-    spec:
-      restartPolicy: OnFailure
-      containers:
-        - name: db-init
-          image: mcr.microsoft.com/mssql-tools
-          command: ["/bin/sh","-c"]
-          args:
-            - |
-              for i in $(seq 1 60); do
-                nc -z nagp26-sql 1433 && break
-                echo waiting for sql
-                sleep 5
-              done
-              /opt/mssql-tools/bin/sqlcmd -S nagp26-sql -U sa -P "$DB_PASSWORD" -i /scripts/init.sql
-          env:
-            - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: sql-credentials
-                  key: DB_PASSWORD
-          volumeMounts:
-            - name: init-sql
-              mountPath: /scripts
-      volumes:
-        - name: init-sql
-          configMap:
-            name: db-init-sql
