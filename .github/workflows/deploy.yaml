@@ -98,6 +98,12 @@ jobs:
             echo "Namespace 'nagp26' not present - OK (Helm will create namespace and secret)"
           fi
 
+      - name: Cleanup old db-init jobs
+        if: ${{ github.event_name == 'push' || inputs.deploy_method == 'helm' }}
+        run: |
+          kubectl delete jobs -n nagp26 -l app=db-init --ignore-not-found
+          kubectl delete job db-init-job -n nagp26 --ignore-not-found
+
       - name: Deploy (Helm)
         if: ${{ github.event_name == 'push' || inputs.deploy_method == 'helm' }}
         run: |
@@ -110,6 +116,14 @@ jobs:
             --set sql.saPassword='${{ secrets.SQL_DB_PASSWORD }}' \
             --set sql.appUser='${{ secrets.SQL_DB_USER }}' \
             --set sql.appPassword='${{ secrets.SQL_DB_PASSWORD }}'
+
+      - name: Wait for db-init job (non-blocking on failure)
+        if: ${{ github.event_name == 'push' || inputs.deploy_method == 'helm' }}
+        run: |
+          REV=$(helm -n nagp26 history nagp26 --max 1 -o json | jq -r '.[0].revision')
+          echo "Waiting for db-init-job-${REV}..."
+          kubectl wait --for=condition=complete job/db-init-job-${REV} -n nagp26 --timeout=8m || \
+            echo "db-init job did not complete in time (API may still work if DB was initialized earlier)"
 
       - name: Prepare K8s resources (namespace + secret)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_method == 'k8s' }}

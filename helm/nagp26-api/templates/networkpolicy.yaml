@@ -11,6 +11,9 @@ spec:
         - podSelector:
             matchLabels:
               app: {{ include "nagp26-api.name" . }}
+        - podSelector:
+            matchLabels:
+              app: db-init
       ports:
         - protocol: TCP
           port: 1433

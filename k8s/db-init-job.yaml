@@ -6,6 +6,9 @@ metadata:
 spec:
   backoffLimit: 4
   template:
+    metadata:
+      labels:
+        app: db-init
     spec:
       restartPolicy: OnFailure
       containers:
@@ -14,12 +17,24 @@ spec:
           command: ["/bin/sh","-c"]
           args:
             - |
+              if [ -x /opt/mssql-tools18/bin/sqlcmd ]; then
+                SQLCMD=/opt/mssql-tools18/bin/sqlcmd
+              elif [ -x /opt/mssql-tools/bin/sqlcmd ]; then
+                SQLCMD=/opt/mssql-tools/bin/sqlcmd
+              else
+                echo "sqlcmd not found"
+                exit 1
+              fi
+
               for i in $(seq 1 60); do
-                /opt/mssql-tools/bin/sqlcmd -S "nagp26-sql" -U "sa" -P "$SA_PASSWORD" -C -Q "SELECT 1" >/dev/null 2>&1 && break
+                if $SQLCMD -S "nagp26-sql" -U "sa" -P "$SA_PASSWORD" -C -Q "SELECT 1" >/dev/null 2>&1; then
+                  echo "sql is ready"
+                  break
+                fi
                 echo waiting for sql
                 sleep 5
               done
-              /opt/mssql-tools/bin/sqlcmd -S "nagp26-sql" -U "sa" -P "$SA_PASSWORD" -C -b -Q "
+              $SQLCMD -S "nagp26-sql" -U "sa" -P "$SA_PASSWORD" -C -b -Q "
               IF DB_ID('${DB_NAME}') IS NULL BEGIN
                 EXEC('CREATE DATABASE [' + '${DB_NAME}' + ']');
               END;
@@ -59,6 +74,7 @@ spec:
                   ('E005','Neha','Sharma','neha.sharma@example.com','9999999995','Support','Engineer',1);
               END;
               "
+              echo "db init completed"
           env:
             - name: DB_NAME
               valueFrom:
