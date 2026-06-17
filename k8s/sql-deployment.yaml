@@ -36,7 +36,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: sql-credentials
-                  key: DB_PASSWORD
+                  key: SA_PASSWORD
             - name: MSSQL_TCP_PORT
               value: "1433"
           volumeMounts:

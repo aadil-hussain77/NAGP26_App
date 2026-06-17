@@ -86,16 +86,16 @@ jobs:
               release_ns=$(kubectl get secret sql-credentials -n nagp26 -o jsonpath='{.metadata.annotations.meta\.helm\.sh/release-namespace}' 2>/dev/null || true)
               echo "labels.managed-by=$managed_by release-name=$release_name release-namespace=$release_ns"
               if [ "$managed_by" != "Helm" ] || [ "$release_name" != "nagp26" ] || [ "$release_ns" != "nagp26" ]; then
-                echo "Secret exists but is not managed by Helm for this release ó deleting so Helm can create it"
+                echo "Secret exists but is not managed by Helm for this release ù deleting so Helm can create it"
                 kubectl delete secret sql-credentials -n nagp26 || true
               else
-                echo "Secret is already managed by Helm release 'nagp26' ó leaving in place"
+                echo "Secret is already managed by Helm release 'nagp26' ù leaving in place"
               fi
             else
-              echo "No existing 'sql-credentials' secret found ó OK (Helm will create it)"
+              echo "No existing 'sql-credentials' secret found ù OK (Helm will create it)"
             fi
           else
-            echo "Namespace 'nagp26' not present ó OK (Helm will create namespace and secret)"
+            echo "Namespace 'nagp26' not present ù OK (Helm will create namespace and secret)"
           fi
 
       - name: Deploy (Helm)
@@ -105,8 +105,10 @@ jobs:
             --namespace nagp26 --create-namespace \
             --set image.repository=aadil77/nagp26-app \
             --set image.tag=${{ github.sha }} \
-            --set sql.saUser='${{ secrets.SQL_DB_USER }}' \
-            --set sql.saPassword='${{ secrets.SQL_DB_PASSWORD }}'
+            --set sql.saUser='sa' \
+            --set sql.saPassword='${{ secrets.SQL_DB_PASSWORD }}' \
+            --set sql.appUser='${{ secrets.SQL_DB_USER }}' \
+            --set sql.appPassword='${{ secrets.SQL_DB_PASSWORD }}'
 
       - name: Prepare K8s resources (namespace + secret)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_method == 'k8s' }}

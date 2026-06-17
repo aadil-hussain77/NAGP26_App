@@ -6,10 +6,14 @@ namespace NAGP26_App.Data
     {
         public static void Initialize(AppDbContext context)
         {
-            // Ensure database and schema are created. Do not insert default records.
-            context.Database.EnsureCreated();
+            // In Kubernetes/Production, the DB + schema + seed are created by the init job.
+            // Avoid requiring elevated permissions (e.g. CREATE DATABASE) from the app login.
+            if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.Equals("Production", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                return;
+            }
 
-            // No initial seed - application will show empty state and allow user to create employees.
+            context.Database.EnsureCreated();
         }
     }
 }

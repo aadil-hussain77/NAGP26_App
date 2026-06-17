@@ -68,6 +68,7 @@ For the cleanest demo on GKE, prefer using a real DNS host (example: `employees-
 The pipeline automatically creates/updates the Kubernetes Secret named **`sql-credentials`** in namespace `nagp26` using GitHub Secrets:
 - `SQL_DB_USER` → `DB_USER`
 - `SQL_DB_PASSWORD` → `DB_PASSWORD`
+- `SQL_DB_PASSWORD` → `SA_PASSWORD` (SQL Server SA password)
 
 Notes:
 - You do **not** need to manually apply a Secret manifest or run `kubectl create secret` from your laptop.
