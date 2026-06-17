@@ -60,13 +60,24 @@ spec:
                 exit 1
               fi
 
+              sleep 10
+
+              echo "creating database if not exists..."
               $SQLCMD -S "$SQL_HOST" -U "sa" -P "$SA_PASSWORD" -C -b -Q "
               IF DB_ID('${DB_NAME}') IS NULL BEGIN
                 EXEC('CREATE DATABASE [' + '${DB_NAME}' + ']');
               END;
-
+              "
               sleep 10
 
+              if [ $? -ne 0 ]; then
+                echo "database creation failed - exiting"
+                exit 1
+              fi
+
+              echo "database created or already exists, proceeding..."
+
+              $SQLCMD -S "$SQL_HOST" -U "sa" -P "$SA_PASSWORD" -C -b -Q "
               USE [${DB_NAME}];
               IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = '${DB_USER}') BEGIN
                 EXEC('CREATE LOGIN [' + '${DB_USER}' + '] WITH PASSWORD = ''' + '${DB_PASSWORD}' + '''');
@@ -103,5 +114,11 @@ spec:
                   ('E005','Neha','Sharma','neha.sharma@example.com','9999999995','Support','Engineer',1);
               END;
               "
+
+              if [ $? -ne 0 ]; then
+                echo "db init setup failed - exiting"
+                exit 1
+              fi
+
               echo "db init completed"
 {{- end }}
