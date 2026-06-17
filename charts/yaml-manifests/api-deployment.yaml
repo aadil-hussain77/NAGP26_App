@@ -27,7 +27,7 @@ spec:
           env:
             - name: ASPNETCORE_ENVIRONMENT
               value: "Production"
-            - name: DB_HOST
+            - name: DB_SERVER
               value: "nagp26-sql"
             - name: DB_NAME
               valueFrom:

@@ -17,11 +17,16 @@ spec:
         app: nagp26-sql
     spec:
       terminationGracePeriodSeconds: 30
+      securityContext:
+        fsGroup: 10001
       containers:
         - name: mssql
           image: {{ .Values.sql.image }}
           ports:
             - containerPort: 1433
+          securityContext:
+            runAsUser: 10001
+            runAsGroup: 0
           env:
             - name: ACCEPT_EULA
               value: "Y"
