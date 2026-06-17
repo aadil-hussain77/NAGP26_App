@@ -19,6 +19,11 @@ spec:
           command: ["/bin/sh","-c"]
           args:
             - |
+              DB_NAME="{{ .Values.sql.dbName }}"
+              DB_USER="{{ .Values.sql.appUser }}"
+              DB_PASSWORD="{{ .Values.sql.appPassword }}"
+              SA_PASSWORD="{{ .Values.sql.saPassword }}"
+
               for i in $(seq 1 60); do
                 /opt/mssql-tools/bin/sqlcmd -S "nagp26-sql" -U "sa" -P "$SA_PASSWORD" -C -Q "SELECT 1" >/dev/null 2>&1 && break
                 echo waiting for sql
@@ -64,25 +69,4 @@ spec:
                   ('E005','Neha','Sharma','neha.sharma@example.com','9999999995','Support','Engineer',1);
               END;
               "
-          env:
-            - name: DB_NAME
-              valueFrom:
-                configMapKeyRef:
-                  name: db-config
-                  key: DB_NAME
-            - name: DB_USER
-              valueFrom:
-                secretKeyRef:
-                  name: sql-credentials
-                  key: DB_USER
-            - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: sql-credentials
-                  key: DB_PASSWORD
-            - name: SA_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: sql-credentials
-                  key: SA_PASSWORD
 {{- end }}
