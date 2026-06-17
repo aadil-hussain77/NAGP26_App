@@ -9,4 +9,4 @@ spec:
     app: nagp26-api
   ports:
     - port: 80
-      targetPort: 80
+      targetPort: 8080

@@ -124,6 +124,9 @@ Expected:
   - `http://<your-host>/` (Employees page)
   - `http://<your-host>/api/employees` (API)
 
+Note:
+- The application listens on container port **8080** (non-root), while the Kubernetes Service is exposed on port **80** and forwards to **8080**.
+
 ## 9) Demo checklist (assignment recording)
 
 - Show objects:

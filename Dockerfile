@@ -13,8 +13,8 @@ RUN dotnet publish ./NAGP26_App.csproj -c Release -o /app/publish /p:UseAppHost=
 # Runtime image
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
-ENV ASPNETCORE_URLS="http://+:80"
-EXPOSE 80
+ENV ASPNETCORE_URLS="http://+:8080"
+EXPOSE 8080
 
 # Copy published app
 COPY --from=build /app/publish ./

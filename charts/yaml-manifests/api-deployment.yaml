@@ -23,7 +23,7 @@ spec:
           image: aadil77/nagp26-app:latest
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 80
+            - containerPort: 8080
           env:
             - name: ASPNETCORE_ENVIRONMENT
               value: "Production"
@@ -47,14 +47,14 @@ spec:
           readinessProbe:
             httpGet:
               path: /api/employees
-              port: 80
-            initialDelaySeconds: 5
+              port: 8080
+            initialDelaySeconds: 20
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /api/employees
-              port: 80
-            initialDelaySeconds: 15
+              port: 8080
+            initialDelaySeconds: 45
             periodSeconds: 20
           resources:
             requests:

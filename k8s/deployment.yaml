@@ -17,10 +17,10 @@ spec:
         - name: nagp26-app
           image: aadil77/nagp26-app:latest
           ports:
-            - containerPort: 80
+            - containerPort: 8080
           env:
             - name: ASPNETCORE_URLS
-              value: "http://+:80"
+              value: "http://+:8080"
             - name: DB_SERVER
               valueFrom:
                 configMapKeyRef:
@@ -44,14 +44,14 @@ spec:
           readinessProbe:
             httpGet:
               path: /api/employees
-              port: 80
-            initialDelaySeconds: 5
+              port: 8080
+            initialDelaySeconds: 20
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /api/employees
-              port: 80
-            initialDelaySeconds: 15
+              port: 8080
+            initialDelaySeconds: 45
             periodSeconds: 20
           resources:
             requests:
@@ -69,7 +69,7 @@ metadata:
 spec:
   ports:
     - port: 80
-      targetPort: 80
+      targetPort: 8080
   selector:
     app: nagp26-app
 ---
