@@ -6,17 +6,11 @@ image:
 
 service:
   type: ClusterIP
-  annotations: {}
-  # Port exposed by the Service (what other cluster components / Ingress will use)
-  port: 80
-  # Port where the application container listens
-  targetPort: 8080
+  port: 8080
 
 ingress:
   enabled: true
   className: gce
-  # Optional annotations to be added to the Ingress metadata
-  annotations: {}
   host: employees-api.nagap26.com
 
 resources:
