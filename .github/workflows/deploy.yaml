@@ -37,6 +37,8 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
+          pull: true
+          no-cache: true
           tags: |
             aadil77/nagp26-app:latest
             aadil77/nagp26-app:${{ github.sha }}

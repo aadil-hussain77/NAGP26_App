@@ -87,6 +87,7 @@ The workflow file is `.github/workflows/deploy.yaml`.
 
 Notes:
 - The pipeline also tags the image with the commit SHA and deploys that tag, which avoids the common `latest` + `IfNotPresent` caching issue.
+- The build step is configured to rebuild without using Docker layer cache to prevent old `ENTRYPOINT` metadata from persisting under reused tags.
 
 ### DB credentials in Helm
 
