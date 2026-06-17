@@ -3,6 +3,6 @@ kind: ConfigMap
 metadata:
   name: db-config
 data:
-  DB_NAME: {{ .Values.sql.dbName | default "NAGP26_DB" }}
-  DB_MAXPOOL: {{ .Values.sql.storage.maxPool | default "100" }}
-  DB_MINPOOL: {{ .Values.sql.storage.minPool | default "0" }}
+  DB_NAME: {{ .Values.sql.dbName | default "NAGP26_DB" | quote }}
+  DB_MAXPOOL: {{ .Values.sql.storage.maxPool | default "100" | quote }}
+  DB_MINPOOL: {{ .Values.sql.storage.minPool | default "0" | quote }}

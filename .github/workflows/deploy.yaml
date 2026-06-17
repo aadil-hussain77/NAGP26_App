@@ -104,6 +104,17 @@ jobs:
             --set sql.saUser='${{ secrets.SQL_DB_USER }}' \
             --set sql.saPassword='${{ secrets.SQL_DB_PASSWORD }}'
 
+      - name: Prepare K8s resources (namespace + secret)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_method == 'k8s' }}
+        run: |
+          echo "Ensuring namespace 'nagp26' exists for k8s deploy..."
+          kubectl create namespace nagp26 --dry-run=client -o yaml | kubectl apply -f -
+          echo "Creating/updating sql-credentials secret for k8s deploy..."
+          kubectl -n nagp26 create secret generic sql-credentials \
+            --from-literal=DB_USER='${{ secrets.SQL_DB_USER }}' \
+            --from-literal=DB_PASSWORD='${{ secrets.SQL_DB_PASSWORD }}' \
+            --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Deploy (Raw Kubernetes YAML)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_method == 'k8s' }}
         run: |

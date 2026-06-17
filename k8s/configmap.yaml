@@ -1,7 +1,11 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: api-db-config
+  name: db-config
+  namespace: nagp26
 data:
-  DB_SERVER: "nagp26-sql"
   DB_NAME: "NAGP26_DB"
+  DB_SERVER: "nagp26-sql"
+  DB_MAXPOOL: "100"
+  DB_MINPOOL: "0"
+# Note: DB_USER and DB_PASSWORD are intentionally not stored here. Use the 'sql-credentials' Secret for sensitive values.

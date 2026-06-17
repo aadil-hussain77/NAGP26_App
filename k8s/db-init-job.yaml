@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-init-job
+  namespace: nagp26
+spec:
+  backoffLimit: 4
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: db-init
+          image: mcr.microsoft.com/mssql-tools
+          command: ["/bin/sh","-c"]
+          args:
+            - |
+              for i in $(seq 1 60); do
+                nc -z nagp26-sql 1433 && break
+                echo waiting for sql
+                sleep 5
+              done
+              /opt/mssql-tools/bin/sqlcmd -S nagp26-sql -U sa -P "$DB_PASSWORD" -i /scripts/init.sql
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sql-credentials
+                  key: DB_PASSWORD
+          volumeMounts:
+            - name: init-sql
+              mountPath: /scripts
+      volumes:
+        - name: init-sql
+          configMap:
+            name: db-init-sql

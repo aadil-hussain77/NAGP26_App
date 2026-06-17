@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: nagp26-app
+  namespace: nagp26
 spec:
   replicas: 4
   selector:
@@ -14,7 +15,7 @@ spec:
     spec:
       containers:
         - name: nagp26-app
-          image: nagp26_app:latest
+          image: aadil77/nagp26-app:latest
           ports:
             - containerPort: 80
           env:
@@ -64,6 +65,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: nagp26-app
+  namespace: nagp26
 spec:
   ports:
     - port: 80
@@ -75,6 +77,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: nagp26-app-hpa
+  namespace: nagp26
 spec:
   scaleTargetRef:
     apiVersion: apps/v1

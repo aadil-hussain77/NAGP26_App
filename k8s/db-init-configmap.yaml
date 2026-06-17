@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-init-sql
+  namespace: nagp26
+data:
+  init.sql: |
+    IF DB_ID('NAGP26_DB') IS NULL
+    BEGIN
+      CREATE DATABASE NAGP26_DB;
+    END
+    GO
+    USE NAGP26_DB;
+    GO
+    IF OBJECT_ID('dbo.Employee', 'U') IS NULL
+    BEGIN
+      CREATE TABLE dbo.Employee (
+        EmployeeId BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        EmployeeCode VARCHAR(20) NOT NULL,
+        FirstName NVARCHAR(100) NOT NULL,
+        LastName NVARCHAR(100) NOT NULL,
+        Email NVARCHAR(255) NOT NULL,
+        ContactNo VARCHAR(15) NOT NULL,
+        Department NVARCHAR(100) NOT NULL,
+        Designation NVARCHAR(100) NOT NULL,
+        IsActive BIT NOT NULL DEFAULT (1),
+        CreatedAt DATETIME2(3) NOT NULL DEFAULT (SYSUTCDATETIME()),
+        UpdatedAt DATETIME2(3) NOT NULL DEFAULT (SYSUTCDATETIME())
+      );
+    END
+    GO
+    IF NOT EXISTS (SELECT 1 FROM dbo.Employee WHERE EmployeeCode = 'E001')
+    BEGIN
+      INSERT INTO dbo.Employee (EmployeeCode, FirstName, LastName, Email, ContactNo, Department, Designation, IsActive)
+      VALUES
+        ('E001','John','Doe','john.doe@example.com','1234567890','HR','Manager',1),
+        ('E002','Jane','Smith','jane.smith@example.com','1234567891','IT','Developer',1),
+        ('E003','Bob','Brown','bob.brown@example.com','1234567892','Finance','Accountant',1),
+        ('E004','Alice','Green','alice.green@example.com','1234567893','Marketing','Executive',1),
+        ('E005','Tom','White','tom.white@example.com','IT','DevOps',1);
+    END
