@@ -23,4 +23,4 @@ COPY --from=build /app/publish ./
 RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /app
 USER appuser
 
-ENTRYPOINT ["dotnet", "NAGP26_App.dll"]ENTRYPOINT ["dotnet", "NAGP26_App.dll"]
+ENTRYPOINT ["dotnet", "NAGP26_App.dll"]

@@ -1,0 +1,50 @@
+{{- if .Values.initJob.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-init-sql
+data:
+  init.sql: |
+    IF DB_ID('NAGP26_DB') IS NULL
+    BEGIN
+      CREATE DATABASE NAGP26_DB;
+    END;
+    GO
+
+    USE NAGP26_DB;
+    GO
+
+    IF OBJECT_ID('dbo.Employees', 'U') IS NULL
+    BEGIN
+      CREATE TABLE dbo.Employees (
+        EmployeeId BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        EmployeeCode NVARCHAR(20) NOT NULL,
+        FirstName NVARCHAR(100) NOT NULL,
+        LastName NVARCHAR(100) NOT NULL,
+        Email NVARCHAR(255) NOT NULL,
+        ContactNo NVARCHAR(15) NOT NULL,
+        Department NVARCHAR(100) NOT NULL,
+        Designation NVARCHAR(100) NOT NULL,
+        IsActive BIT NOT NULL,
+        CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        UpdatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        RowVersion ROWVERSION NOT NULL
+      );
+      CREATE UNIQUE INDEX IX_Employees_EmployeeCode ON dbo.Employees(EmployeeCode);
+      CREATE UNIQUE INDEX IX_Employees_Email ON dbo.Employees(Email);
+    END;
+    GO
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.Employees)
+    BEGIN
+      INSERT INTO dbo.Employees (EmployeeCode, FirstName, LastName, Email, ContactNo, Department, Designation, IsActive)
+      VALUES
+        ('E001','Aadil','Hussain','aadil@example.com','9999999991','Engineering','Developer',1),
+        ('E002','John','Doe','john.doe@example.com','9999999992','Sales','Executive',1),
+        ('E003','Jane','Smith','jane.smith@example.com','9999999993','HR','Specialist',1),
+        ('E004','Ravi','Kumar','ravi.kumar@example.com','9999999994','Finance','Analyst',1),
+        ('E005','Neha','Sharma','neha.sharma@example.com','9999999995','Support','Engineer',1);
+    END;
+    GO
+{{- end }}
+
