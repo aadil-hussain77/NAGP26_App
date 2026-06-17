@@ -85,6 +85,9 @@ The workflow file is `.github/workflows/deploy.yaml`.
   - Docker image built and pushed to Docker Hub
   - Helm upgrade/install completed
 
+Notes:
+- The pipeline also tags the image with the commit SHA and deploys that tag, which avoids the common `latest` + `IfNotPresent` caching issue.
+
 ### DB credentials in Helm
 
 The workflow passes `SQL_DB_USER` and `SQL_DB_PASSWORD` into Helm using `--set`, so the Helm-managed Secret matches the same values.

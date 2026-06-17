@@ -15,7 +15,7 @@ spec:
           args:
             - |
               for i in $(seq 1 60); do
-                nc -z nagp26-sql 1433 && break
+                /opt/mssql-tools/bin/sqlcmd -S nagp26-sql -U sa -P "$DB_PASSWORD" -Q "SELECT 1" >/dev/null 2>&1 && break
                 echo waiting for sql
                 sleep 5
               done
