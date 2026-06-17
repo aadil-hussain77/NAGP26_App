@@ -103,6 +103,7 @@ jobs:
         run: |
           helm upgrade --install nagp26 ./helm/nagp26-api \
             --namespace nagp26 --create-namespace \
+            --wait --timeout 10m \
             --set image.repository=aadil77/nagp26-app \
             --set image.tag=${{ github.sha }} \
             --set sql.saUser='sa' \
