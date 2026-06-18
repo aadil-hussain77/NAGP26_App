@@ -64,57 +64,45 @@ spec:
 
               sleep 10
 
-              echo "creating database if not exists..."
-              $SQLCMD -S "$SQL_HOST" -U "sa" -P "$SA_PASSWORD" -C -b -Q "
-              IF DB_ID(N'${DB_NAME}') IS NULL
-              BEGIN
-                EXEC(N'CREATE DATABASE [${DB_NAME}]');
-              END;
-              "
-
-              sleep 10
-
-              echo "initializing login + schema + seed..."
-              $SQLCMD -S "$SQL_HOST" -d "$DB_NAME" -U "sa" -P "$SA_PASSWORD" -C -b -Q "
-              IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = N'${DB_USER}')
-              BEGIN
-                CREATE LOGIN [${DB_USER}] WITH PASSWORD = '${DB_PASSWORD}';
-              END;
-              IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'${DB_USER}')
-              BEGIN
-                CREATE USER [${DB_USER}] FOR LOGIN [${DB_USER}];
-              END;
-              ALTER ROLE db_owner ADD MEMBER [${DB_USER}];
-              IF OBJECT_ID(N'dbo.Employees', N'U') IS NULL
-              BEGIN
-                CREATE TABLE dbo.Employees (
-                  EmployeeId BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-                  EmployeeCode NVARCHAR(20) NOT NULL,
-                  FirstName NVARCHAR(100) NOT NULL,
-                  LastName NVARCHAR(100) NOT NULL,
-                  Email NVARCHAR(255) NOT NULL,
-                  ContactNo NVARCHAR(15) NOT NULL,
-                  Department NVARCHAR(100) NOT NULL,
-                  Designation NVARCHAR(100) NOT NULL,
-                  IsActive BIT NOT NULL,
-                  CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-                  UpdatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-                  RowVersion ROWVERSION NOT NULL
-                );
-                CREATE UNIQUE INDEX IX_Employees_EmployeeCode ON dbo.Employees(EmployeeCode);
-                CREATE UNIQUE INDEX IX_Employees_Email ON dbo.Employees(Email);
-              END;
-              IF NOT EXISTS (SELECT 1 FROM dbo.Employees)
-              BEGIN
-                INSERT INTO dbo.Employees (EmployeeCode, FirstName, LastName, Email, ContactNo, Department, Designation, IsActive)
-                VALUES
-                  ('E001','Aadil','Hussain','aadil@example.com','9999999991','Engineering','Developer',1),
-                  ('E002','John','Doe','john.doe@example.com','9999999992','Sales','Executive',1),
-                  ('E003','Jane','Smith','jane.smith@example.com','9999999993','HR','Specialist',1),
-                  ('E004','Ravi','Kumar','ravi.kumar@example.com','9999999994','Finance','Analyst',1),
-                  ('E005','Neha','Sharma','neha.sharma@example.com','9999999995','Support','Engineer',1);
-              END;
-              "
+              echo "running init.sql..."
+              DB_PASSWORD_SQLCMD=$(printf "%s" "$DB_PASSWORD" | sed "s/'/''/g")
+              $SQLCMD -S "$SQL_HOST" -U "sa" -P "$SA_PASSWORD" -C -b \
+                -v DB_NAME="$DB_NAME" \
+                -v DB_USER="$DB_USER" \
+                -v DB_PASSWORD="$DB_PASSWORD_SQLCMD" \
+                -i /opt/init/init.sql
 
               echo "db init completed"
+
+          env:
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: DB_NAME
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: sql-credentials
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sql-credentials
+                  key: DB_PASSWORD
+            - name: SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sql-credentials
+                  key: SA_PASSWORD
+
+          volumeMounts:
+            - name: init-sql
+              mountPath: /opt/init
+              readOnly: true
+
+      volumes:
+        - name: init-sql
+          configMap:
+            name: db-init-sql
 {{- end }}
