@@ -11,31 +11,33 @@ data:
     GO
 
     DECLARE @db sysname = N'__DB_NAME__';
+    DECLARE @dbq nvarchar(512) = N'[' + REPLACE(@db, N']', N']]') + N']';
     IF DB_ID(@db) IS NULL
     BEGIN
-      EXEC(N'CREATE DATABASE ' + QUOTENAME(@db));
+      EXEC(N'CREATE DATABASE ' + @dbq);
     END;
     GO
 
     DECLARE @u sysname = N'__DB_USER__';
     DECLARE @p nvarchar(512) = N'__DB_PASSWORD__';
+    DECLARE @uq nvarchar(512) = N'[' + REPLACE(@u, N']', N']]') + N']';
 
     IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = @u)
     BEGIN
-      EXEC(N'CREATE LOGIN ' + QUOTENAME(@u) + N' WITH PASSWORD = ''' + REPLACE(@p, N'''', N'''''') + N'''' );
+      EXEC(N'CREATE LOGIN ' + @uq + N' WITH PASSWORD = ''' + REPLACE(@p, N'''', N'''''') + N'''' );
     END;
     GO
 
-    EXEC(N'USE ' + QUOTENAME(@db));
+    EXEC(N'USE ' + @dbq);
     GO
 
     IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = @u)
     BEGIN
-      EXEC(N'CREATE USER ' + QUOTENAME(@u) + N' FOR LOGIN ' + QUOTENAME(@u));
+      EXEC(N'CREATE USER ' + @uq + N' FOR LOGIN ' + @uq);
     END;
     GO
 
-    EXEC(N'ALTER ROLE db_owner ADD MEMBER ' + QUOTENAME(@u));
+    EXEC(N'ALTER ROLE db_owner ADD MEMBER ' + @uq);
     GO
 
     IF OBJECT_ID(N'dbo.Employees', N'U') IS NULL

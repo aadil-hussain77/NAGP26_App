@@ -65,11 +65,21 @@ spec:
               sleep 10
 
               echo "running init.sql..."
+              esc_sed() {
+                # Escape sed replacement chars: \, &, |
+                printf "%s" "$1" | sed -e 's/[\\&|]/\\&/g'
+              }
+
+              DB_NAME_SED=$(esc_sed "$DB_NAME")
+              DB_USER_SED=$(esc_sed "$DB_USER")
+              # SQL literal escaping for single quotes, then sed escaping
               DB_PASSWORD_SQL=$(printf "%s" "$DB_PASSWORD" | sed "s/'/''/g")
+              DB_PASSWORD_SED=$(esc_sed "$DB_PASSWORD_SQL")
+
               sed \
-                -e "s/__DB_NAME__/${DB_NAME}/g" \
-                -e "s/__DB_USER__/${DB_USER}/g" \
-                -e "s/__DB_PASSWORD__/${DB_PASSWORD_SQL}/g" \
+                -e "s|__DB_NAME__|${DB_NAME_SED}|g" \
+                -e "s|__DB_USER__|${DB_USER_SED}|g" \
+                -e "s|__DB_PASSWORD__|${DB_PASSWORD_SED}|g" \
                 /opt/init/init.sql > /tmp/init.sql
 
               $SQLCMD -S "$SQL_HOST" -U "sa" -P "$SA_PASSWORD" -C -b -i /tmp/init.sql
