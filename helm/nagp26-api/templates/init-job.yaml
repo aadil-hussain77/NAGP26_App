@@ -69,15 +69,15 @@ spec:
 
               echo "creating database if not exists..."
 
-              cat > /tmp/db-create.sql <<SQL
-USE master;
-IF DB_ID('${ESC_DB_NAME}') IS NULL
-BEGIN
-  DECLARE @s NVARCHAR(MAX) = N'CREATE DATABASE [' + '${ESC_DB_NAME}' + N']';
-  EXEC(@s);
-END
-GO
-SQL
+              cat > /tmp/db-create.sql <<'SQL'
+              USE master;
+              IF DB_ID('${ESC_DB_NAME}') IS NULL
+              BEGIN
+                DECLARE @s NVARCHAR(MAX) = N'CREATE DATABASE [' + '${ESC_DB_NAME}' + N']';
+                EXEC(@s);
+              END
+              GO
+              SQL
 
               $SQLCMD -S "$SQL_HOST" -U "sa" -P "$SA_PASSWORD" -i /tmp/db-create.sql -b -C
               if [ $? -ne 0 ]; then
@@ -90,14 +90,14 @@ SQL
 
               echo "creating login if not exists..."
 
-              cat > /tmp/create-login.sql <<SQL
-USE master;
-IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = '${ESC_DB_USER}')
-BEGIN
-  CREATE LOGIN [${ESC_DB_USER}] WITH PASSWORD = '${ESC_DB_PASSWORD}';
-END
-GO
-SQL
+              cat > /tmp/create-login.sql <<'SQL'
+              USE master;
+              IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = '${ESC_DB_USER}')
+              BEGIN
+                CREATE LOGIN [${ESC_DB_USER}] WITH PASSWORD = '${ESC_DB_PASSWORD}';
+              END
+              GO
+              SQL
 
               $SQLCMD -S "$SQL_HOST" -U "sa" -P "$SA_PASSWORD" -i /tmp/create-login.sql -b -C
               if [ $? -ne 0 ]; then
@@ -110,56 +110,53 @@ SQL
 
               echo "creating user, assigning role, creating table and seeding data..."
 
-              cat > /tmp/db-setup.sql <<SQL
-USE [${ESC_DB_NAME}];
-IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = '${ESC_DB_USER}')
-BEGIN
-  CREATE USER [${ESC_DB_USER}] FOR LOGIN [${ESC_DB_USER}];
-END
-GO
-ALTER ROLE db_owner ADD MEMBER [${ESC_DB_USER}];
-GO
-IF OBJECT_ID('dbo.Employees','U') IS NULL
-BEGIN
-  CREATE TABLE dbo.Employees (
-    EmployeeId BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    EmployeeCode NVARCHAR(20) NOT NULL,
-    FirstName NVARCHAR(100) NOT NULL,
-    LastName NVARCHAR(100) NOT NULL,
-    Email NVARCHAR(255) NOT NULL,
-    ContactNo NVARCHAR(15) NOT NULL,
-    Department NVARCHAR(100) NOT NULL,
-    Designation NVARCHAR(100) NOT NULL,
-    IsActive BIT NOT NULL,
-    CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-    UpdatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-    RowVersion ROWVERSION NOT NULL
-  );
-  CREATE UNIQUE INDEX IX_Employees_EmployeeCode ON dbo.Employees(EmployeeCode);
-  CREATE UNIQUE INDEX IX_Employees_Email ON dbo.Employees(Email);
-END
-GO
-IF NOT EXISTS (SELECT 1 FROM dbo.Employees)
-BEGIN
-  INSERT INTO dbo.Employees (EmployeeCode, FirstName, LastName, Email, ContactNo, Department, Designation, IsActive)
-  VALUES
-    ('E001','Aadil','Hussain','aadil@example.com','9999999991','Engineering','Developer',1),
-    ('E002','John','Doe','john.doe@example.com','9999999992','Sales','Executive',1),
-    ('E003','Jane','Smith','jane.smith@example.com','9999999993','HR','Specialist',1),
-    ('E004','Ravi','Kumar','ravi.kumar@example.com','9999999994','Finance','Analyst',1),
-    ('E005','Neha','Sharma','neha.sharma@example.com','9999999995','Support','Engineer',1);
-END
-GO
-SQL
+              cat > /tmp/db-setup.sql <<'SQL'
+              USE [${ESC_DB_NAME}];
+              IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = '${ESC_DB_USER}')
+              BEGIN
+                CREATE USER [${ESC_DB_USER}] FOR LOGIN [${ESC_DB_USER}];
+              END
+              GO
+              ALTER ROLE db_owner ADD MEMBER [${ESC_DB_USER}];
+              GO
+              IF OBJECT_ID('dbo.Employees','U') IS NULL
+              BEGIN
+                CREATE TABLE dbo.Employees (
+                  EmployeeId BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                  EmployeeCode NVARCHAR(20) NOT NULL,
+                  FirstName NVARCHAR(100) NOT NULL,
+                  LastName NVARCHAR(100) NOT NULL,
+                  Email NVARCHAR(255) NOT NULL,
+                  ContactNo NVARCHAR(15) NOT NULL,
+                  Department NVARCHAR(100) NOT NULL,
+                  Designation NVARCHAR(100) NOT NULL,
+                  IsActive BIT NOT NULL,
+                  CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+                  UpdatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+                  RowVersion ROWVERSION NOT NULL
+                );
+                CREATE UNIQUE INDEX IX_Employees_EmployeeCode ON dbo.Employees(EmployeeCode);
+                CREATE UNIQUE INDEX IX_Employees_Email ON dbo.Employees(Email);
+              END
+              GO
+              IF NOT EXISTS (SELECT 1 FROM dbo.Employees)
+              BEGIN
+                INSERT INTO dbo.Employees (EmployeeCode, FirstName, LastName, Email, ContactNo, Department, Designation, IsActive)
+                VALUES
+                  ('E001','Aadil','Hussain','aadil@example.com','9999999991','Engineering','Developer',1),
+                  ('E002','John','Doe','john.doe@example.com','9999999992','Sales','Executive',1),
+                  ('E003','Jane','Smith','jane.smith@example.com','9999999993','HR','Specialist',1),
+                  ('E004','Ravi','Kumar','ravi.kumar@example.com','9999999994','Finance','Analyst',1),
+                  ('E005','Neha','Sharma','neha.sharma@example.com','9999999995','Support','Engineer',1);
+              END
+              GO
+              SQL
 
               $SQLCMD -S "$SQL_HOST" -U "sa" -P "$SA_PASSWORD" -i /tmp/db-setup.sql -b -C
               if [ $? -ne 0 ]; then
                 echo "db setup failed"
                 exit 1
               fi
-
-              # wait after creating user/role/table/seed
-              sleep 10
 
               echo "db init completed"
 {{- end }}
