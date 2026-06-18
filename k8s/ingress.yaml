@@ -8,8 +8,7 @@ metadata:
 spec:
   ingressClassName: gce
   rules:
-    - host: nagp26.local
-      http:
+    - http:
         paths:
           - path: /
             pathType: Prefix
