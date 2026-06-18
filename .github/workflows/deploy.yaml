@@ -8,7 +8,7 @@ name: CI/CD
       deploy_method:
         description: "Deployment method: helm or k8s"
         required: true
-        default: "k8s"
+        default: "helm"
         type: choice
         options:
           - helm
