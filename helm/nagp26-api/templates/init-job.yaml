@@ -66,10 +66,9 @@ spec:
 
               echo "creating database if not exists..."
               $SQLCMD -S "$SQL_HOST" -U "sa" -P "$SA_PASSWORD" -C -b -Q "
-              DECLARE @db sysname = N'${DB_NAME}';
-              IF DB_ID(@db) IS NULL
+              IF DB_ID(N'${DB_NAME}') IS NULL
               BEGIN
-                EXEC(N'CREATE DATABASE ' + QUOTENAME(@db));
+                EXEC(N'CREATE DATABASE [${DB_NAME}]');
               END;
               "
 
@@ -77,21 +76,19 @@ spec:
 
               echo "initializing login + schema + seed..."
               $SQLCMD -S "$SQL_HOST" -U "sa" -P "$SA_PASSWORD" -C -b -Q "
-              DECLARE @db sysname = N'${DB_NAME}';
-              DECLARE @u sysname = N'${DB_USER}';
               DECLARE @p nvarchar(512) = N'${DB_PASSWORD}';
 
-              EXEC(N'USE ' + QUOTENAME(@db));
+              EXEC(N'USE [${DB_NAME}]');
 
-              IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = @u)
+              IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = N'${DB_USER}')
               BEGIN
-                EXEC(N'CREATE LOGIN ' + QUOTENAME(@u) + N' WITH PASSWORD = ''' + REPLACE(@p, N'''', N'''''') + N'''' );
+                EXEC(N'CREATE LOGIN [${DB_USER}] WITH PASSWORD = ''' + REPLACE(@p, N'''', N'''''') + N'''' );
               END;
-              IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = @u)
+              IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'${DB_USER}')
               BEGIN
-                EXEC(N'CREATE USER ' + QUOTENAME(@u) + N' FOR LOGIN ' + QUOTENAME(@u));
+                EXEC(N'CREATE USER [${DB_USER}] FOR LOGIN [${DB_USER}]');
               END;
-              EXEC(N'ALTER ROLE db_owner ADD MEMBER ' + QUOTENAME(@u));
+              EXEC(N'ALTER ROLE db_owner ADD MEMBER [${DB_USER}]');
               IF OBJECT_ID(N'dbo.Employees', N'U') IS NULL
               BEGIN
                 CREATE TABLE dbo.Employees (
