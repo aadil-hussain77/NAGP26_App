@@ -7,22 +7,18 @@ data:
   init.sql: |
     SET NOCOUNT ON;
 
-    :setvar DB_NAME "$(DB_NAME)"
-    :setvar DB_USER "$(DB_USER)"
-    :setvar DB_PASSWORD "$(DB_PASSWORD)"
-
     USE [master];
     GO
 
-    DECLARE @db sysname = N'$(DB_NAME)';
+    DECLARE @db sysname = N'__DB_NAME__';
     IF DB_ID(@db) IS NULL
     BEGIN
       EXEC(N'CREATE DATABASE ' + QUOTENAME(@db));
     END;
     GO
 
-    DECLARE @u sysname = N'$(DB_USER)';
-    DECLARE @p nvarchar(512) = N'$(DB_PASSWORD)';
+    DECLARE @u sysname = N'__DB_USER__';
+    DECLARE @p nvarchar(512) = N'__DB_PASSWORD__';
 
     IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = @u)
     BEGIN

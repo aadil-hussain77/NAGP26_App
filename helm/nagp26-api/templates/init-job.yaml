@@ -65,12 +65,14 @@ spec:
               sleep 10
 
               echo "running init.sql..."
-              DB_PASSWORD_SQLCMD=$(printf "%s" "$DB_PASSWORD" | sed "s/'/''/g")
-              $SQLCMD -S "$SQL_HOST" -U "sa" -P "$SA_PASSWORD" -C -b \
-                -v DB_NAME="$DB_NAME" \
-                -v DB_USER="$DB_USER" \
-                -v DB_PASSWORD="$DB_PASSWORD_SQLCMD" \
-                -i /opt/init/init.sql
+              DB_PASSWORD_SQL=$(printf "%s" "$DB_PASSWORD" | sed "s/'/''/g")
+              sed \
+                -e "s/__DB_NAME__/${DB_NAME}/g" \
+                -e "s/__DB_USER__/${DB_USER}/g" \
+                -e "s/__DB_PASSWORD__/${DB_PASSWORD_SQL}/g" \
+                /opt/init/init.sql > /tmp/init.sql
+
+              $SQLCMD -S "$SQL_HOST" -U "sa" -P "$SA_PASSWORD" -C -b -i /tmp/init.sql
 
               echo "db init completed"
 
