@@ -10,34 +10,37 @@ data:
     USE [master];
     GO
 
-    DECLARE @db sysname = N'__DB_NAME__';
-    DECLARE @dbq nvarchar(512) = N'[' + REPLACE(@db, N']', N']]') + N']';
-    IF DB_ID(@db) IS NULL
+    IF DB_ID(N'__DB_NAME__') IS NULL
     BEGIN
-      EXEC(N'CREATE DATABASE ' + @dbq);
+      CREATE DATABASE [__DB_NAME__];
     END;
     GO
 
-    DECLARE @u sysname = N'__DB_USER__';
-    DECLARE @p nvarchar(512) = N'__DB_PASSWORD__';
-    DECLARE @uq nvarchar(512) = N'[' + REPLACE(@u, N']', N']]') + N']';
+    USE [__DB_NAME__];
+    GO
 
-    IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = @u)
+    IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = N'__DB_USER__')
     BEGIN
-      EXEC(N'CREATE LOGIN ' + @uq + N' WITH PASSWORD = ''' + REPLACE(@p, N'''', N'''''') + N'''' );
+      CREATE LOGIN [__DB_USER__] WITH PASSWORD = '__DB_PASSWORD__';
     END;
     GO
 
-    EXEC(N'USE ' + @dbq);
-    GO
-
-    IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = @u)
+    IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'__DB_USER__')
     BEGIN
-      EXEC(N'CREATE USER ' + @uq + N' FOR LOGIN ' + @uq);
+      CREATE USER [__DB_USER__] FOR LOGIN [__DB_USER__];
     END;
     GO
 
-    EXEC(N'ALTER ROLE db_owner ADD MEMBER ' + @uq);
+    IF NOT EXISTS (
+      SELECT 1
+      FROM sys.database_role_members rm
+      JOIN sys.database_principals r ON rm.role_principal_id = r.principal_id
+      JOIN sys.database_principals u ON rm.member_principal_id = u.principal_id
+      WHERE r.name = N'db_owner' AND u.name = N'__DB_USER__'
+    )
+    BEGIN
+      ALTER ROLE db_owner ADD MEMBER [__DB_USER__];
+    END;
     GO
 
     IF OBJECT_ID(N'dbo.Employees', N'U') IS NULL
@@ -56,7 +59,17 @@ data:
         UpdatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
         RowVersion ROWVERSION NOT NULL
       );
+    END;
+    GO
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Employees_EmployeeCode' AND object_id = OBJECT_ID(N'dbo.Employees'))
+    BEGIN
       CREATE UNIQUE INDEX IX_Employees_EmployeeCode ON dbo.Employees(EmployeeCode);
+    END;
+    GO
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Employees_Email' AND object_id = OBJECT_ID(N'dbo.Employees'))
+    BEGIN
       CREATE UNIQUE INDEX IX_Employees_Email ON dbo.Employees(Email);
     END;
     GO
