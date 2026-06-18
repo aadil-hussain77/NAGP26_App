@@ -70,7 +70,7 @@ jobs:
 
       # Helm path keeps using the provided zone secret as-is.
       - name: Configure kubectl (Helm)
-        if: ${{ github.event_name == 'push' || inputs.deploy_method == 'helm' }}
+        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy_method == 'helm') }}
         uses: google-github-actions/get-gke-credentials@v2
         with:
           cluster_name: ${{ secrets.GKE_CLUSTER }}
