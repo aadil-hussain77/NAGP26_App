@@ -75,10 +75,8 @@ spec:
               sleep 10
 
               echo "initializing login + schema + seed..."
-              $SQLCMD -S "$SQL_HOST" -U "sa" -P "$SA_PASSWORD" -C -b -Q "
+              $SQLCMD -S "$SQL_HOST" -d "$DB_NAME" -U "sa" -P "$SA_PASSWORD" -C -b -Q "
               DECLARE @p nvarchar(512) = N'${DB_PASSWORD}';
-
-              EXEC(N'USE [${DB_NAME}]');
 
               IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = N'${DB_USER}')
               BEGIN
