@@ -76,17 +76,15 @@ spec:
 
               echo "initializing login + schema + seed..."
               $SQLCMD -S "$SQL_HOST" -d "$DB_NAME" -U "sa" -P "$SA_PASSWORD" -C -b -Q "
-              DECLARE @p nvarchar(512) = N'${DB_PASSWORD}';
-
               IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = N'${DB_USER}')
               BEGIN
-                EXEC(N'CREATE LOGIN [${DB_USER}] WITH PASSWORD = ''' + REPLACE(@p, N'''', N'''''') + N'''' );
+                CREATE LOGIN [${DB_USER}] WITH PASSWORD = '${DB_PASSWORD}';
               END;
               IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'${DB_USER}')
               BEGIN
-                EXEC(N'CREATE USER [${DB_USER}] FOR LOGIN [${DB_USER}]');
+                CREATE USER [${DB_USER}] FOR LOGIN [${DB_USER}];
               END;
-              EXEC(N'ALTER ROLE db_owner ADD MEMBER [${DB_USER}]');
+              ALTER ROLE db_owner ADD MEMBER [${DB_USER}];
               IF OBJECT_ID(N'dbo.Employees', N'U') IS NULL
               BEGIN
                 CREATE TABLE dbo.Employees (
