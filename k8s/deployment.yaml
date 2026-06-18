@@ -16,20 +16,20 @@ spec:
       containers:
         - name: nagp26-app
           image: aadil77/nagp26-app:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
           env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Production"
             - name: ASPNETCORE_URLS
               value: "http://+:8080"
             - name: DB_SERVER
-              valueFrom:
-                configMapKeyRef:
-                  name: api-db-config
-                  key: DB_SERVER
+              value: "nagp26-sql"
             - name: DB_NAME
               valueFrom:
                 configMapKeyRef:
-                  name: api-db-config
+                  name: db-config
                   key: DB_NAME
             - name: DB_USER
               valueFrom:
@@ -66,9 +66,12 @@ kind: Service
 metadata:
   name: nagp26-app
   namespace: nagp26
+  annotations:
+    cloud.google.com/neg: '{"ingress":true}'
 spec:
+  type: NodePort
   ports:
-    - port: 80
+    - port: 8080
       targetPort: 8080
   selector:
     app: nagp26-app
@@ -84,7 +87,7 @@ spec:
     kind: Deployment
     name: nagp26-app
   minReplicas: 4
-  maxReplicas: 5
+  maxReplicas: 10
   metrics:
     - type: Resource
       resource:

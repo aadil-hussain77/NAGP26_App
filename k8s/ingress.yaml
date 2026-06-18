@@ -14,5 +14,5 @@ spec:
               service:
                 name: nagp26-app
                 port:
-                  number: 80
+                  number: 8080
 

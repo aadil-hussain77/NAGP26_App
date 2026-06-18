@@ -8,7 +8,7 @@ name: CI/CD
       deploy_method:
         description: "Deployment method: helm or k8s"
         required: true
-        default: "helm"
+        default: "k8s"
         type: choice
         options:
           - helm
@@ -134,9 +134,16 @@ jobs:
           kubectl -n nagp26 create secret generic sql-credentials \
             --from-literal=DB_USER='${{ secrets.SQL_DB_USER }}' \
             --from-literal=DB_PASSWORD='${{ secrets.SQL_DB_PASSWORD }}' \
+            --from-literal=SA_PASSWORD='${{ secrets.SQL_DB_PASSWORD }}' \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy (Raw Kubernetes YAML)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_method == 'k8s' }}
         run: |
           kubectl apply -f k8s/
+          echo "Pinning API image to current commit SHA..."
+          kubectl -n nagp26 set image deployment/nagp26-app nagp26-app=aadil77/nagp26-app:${{ github.sha }} --record
+          kubectl -n nagp26 rollout status deployment/nagp26-app --timeout=10m
+          echo "Waiting for db-init-job (non-blocking on failure)..."
+          kubectl wait --for=condition=complete job/db-init-job -n nagp26 --timeout=8m || \
+            echo "db-init job did not complete in time (API may still work if DB was initialized earlier)"

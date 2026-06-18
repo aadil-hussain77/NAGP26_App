@@ -104,7 +104,7 @@ spec:
             - name: DB_NAME
               valueFrom:
                 configMapKeyRef:
-                  name: api-db-config
+                  name: db-config
                   key: DB_NAME
             - name: DB_USER
               valueFrom:

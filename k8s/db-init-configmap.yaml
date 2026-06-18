@@ -5,37 +5,83 @@ metadata:
   namespace: nagp26
 data:
   init.sql: |
-    IF DB_ID('NAGP26_DB') IS NULL
-    BEGIN
-      CREATE DATABASE NAGP26_DB;
-    END
+    SET NOCOUNT ON;
+
+    USE [master];
     GO
-    USE NAGP26_DB;
-    GO
-    IF OBJECT_ID('dbo.Employee', 'U') IS NULL
+
+    IF DB_ID(N'__DB_NAME__') IS NULL
     BEGIN
-      CREATE TABLE dbo.Employee (
+      CREATE DATABASE [__DB_NAME__];
+    END;
+    GO
+
+    USE [__DB_NAME__];
+    GO
+
+    IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = N'__DB_USER__')
+    BEGIN
+      CREATE LOGIN [__DB_USER__] WITH PASSWORD = '__DB_PASSWORD__';
+    END;
+    GO
+
+    IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'__DB_USER__')
+    BEGIN
+      CREATE USER [__DB_USER__] FOR LOGIN [__DB_USER__];
+    END;
+    GO
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM sys.database_role_members rm
+      JOIN sys.database_principals r ON rm.role_principal_id = r.principal_id
+      JOIN sys.database_principals u ON rm.member_principal_id = u.principal_id
+      WHERE r.name = N'db_owner' AND u.name = N'__DB_USER__'
+    )
+    BEGIN
+      ALTER ROLE db_owner ADD MEMBER [__DB_USER__];
+    END;
+    GO
+
+    IF OBJECT_ID(N'dbo.Employees', N'U') IS NULL
+    BEGIN
+      CREATE TABLE dbo.Employees (
         EmployeeId BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        EmployeeCode VARCHAR(20) NOT NULL,
+        EmployeeCode NVARCHAR(20) NOT NULL,
         FirstName NVARCHAR(100) NOT NULL,
         LastName NVARCHAR(100) NOT NULL,
         Email NVARCHAR(255) NOT NULL,
-        ContactNo VARCHAR(15) NOT NULL,
+        ContactNo NVARCHAR(15) NOT NULL,
         Department NVARCHAR(100) NOT NULL,
         Designation NVARCHAR(100) NOT NULL,
-        IsActive BIT NOT NULL DEFAULT (1),
-        CreatedAt DATETIME2(3) NOT NULL DEFAULT (SYSUTCDATETIME()),
-        UpdatedAt DATETIME2(3) NOT NULL DEFAULT (SYSUTCDATETIME())
+        IsActive BIT NOT NULL,
+        CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        UpdatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        RowVersion ROWVERSION NOT NULL
       );
-    END
+    END;
     GO
-    IF NOT EXISTS (SELECT 1 FROM dbo.Employee WHERE EmployeeCode = 'E001')
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Employees_EmployeeCode' AND object_id = OBJECT_ID(N'dbo.Employees'))
     BEGIN
-      INSERT INTO dbo.Employee (EmployeeCode, FirstName, LastName, Email, ContactNo, Department, Designation, IsActive)
+      CREATE UNIQUE INDEX IX_Employees_EmployeeCode ON dbo.Employees(EmployeeCode);
+    END;
+    GO
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Employees_Email' AND object_id = OBJECT_ID(N'dbo.Employees'))
+    BEGIN
+      CREATE UNIQUE INDEX IX_Employees_Email ON dbo.Employees(Email);
+    END;
+    GO
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.Employees)
+    BEGIN
+      INSERT INTO dbo.Employees (EmployeeCode, FirstName, LastName, Email, ContactNo, Department, Designation, IsActive)
       VALUES
-        ('E001','John','Doe','john.doe@example.com','1234567890','HR','Manager',1),
-        ('E002','Jane','Smith','jane.smith@example.com','1234567891','IT','Developer',1),
-        ('E003','Bob','Brown','bob.brown@example.com','1234567892','Finance','Accountant',1),
-        ('E004','Alice','Green','alice.green@example.com','1234567893','Marketing','Executive',1),
-        ('E005','Tom','White','tom.white@example.com','IT','DevOps',1);
-    END
+        ('E001','Aadil','Hussain','aadil@example.com','9999999991','Engineering','Developer',1),
+        ('E002','John','Doe','john.doe@example.com','9999999992','Sales','Executive',1),
+        ('E003','Jane','Smith','jane.smith@example.com','9999999993','HR','Specialist',1),
+        ('E004','Ravi','Kumar','ravi.kumar@example.com','9999999994','Finance','Analyst',1),
+        ('E005','Neha','Sharma','neha.sharma@example.com','9999999995','Support','Engineer',1);
+    END;
+    GO

@@ -30,8 +30,8 @@ Run locally:
 Container & Kubernetes:
 - Build image: `docker build -t nagp26_app:latest .`
 - Create the DB password secret (do not commit the real password in YAML):
-  - `kubectl create secret generic sql-credentials --from-literal=sa-password='<YOUR_STRONG_PASSWORD>' --dry-run=client -o yaml | kubectl apply -f -`
-- Apply k8s manifests: `kubectl apply -f k8s/`
+  - `kubectl -n nagp26 create secret generic sql-credentials --from-literal=DB_USER='<DB_USER>' --from-literal=DB_PASSWORD='<DB_PASSWORD>' --from-literal=SA_PASSWORD='<SA_PASSWORD>' --dry-run=client -o yaml | kubectl apply -f -`
+- Apply k8s manifests: `kubectl apply -f k8s/` (ensure namespace `nagp26` exists first, or create it)
 
 Design notes:
 - EF Core with DbContext pooling
