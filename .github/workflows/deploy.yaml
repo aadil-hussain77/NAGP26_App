@@ -84,7 +84,11 @@ jobs:
         run: |
           set -eu
           echo "Resolving location for cluster '${{ secrets.GKE_CLUSTER }}' in project '${{ secrets.GCP_PROJECT }}'..."
-          LOC=$(gcloud container clusters list --project="${{ secrets.GCP_PROJECT }}" --format="value(name,location)" | awk '$1=="${{ secrets.GKE_CLUSTER }}" {print $2; exit}')
+          # Use gcloud filter so output is unambiguous
+          LOC=$(gcloud container clusters list \
+            --project="${{ secrets.GCP_PROJECT }}" \
+            --filter="name=('${{ secrets.GKE_CLUSTER }}')" \
+            --format="value(location)" | head -n 1)
           if [ -z "${LOC:-}" ]; then
             echo "ERROR: Could not find cluster '${{ secrets.GKE_CLUSTER }}' in project '${{ secrets.GCP_PROJECT }}'."
             echo "Available clusters:"
@@ -93,6 +97,7 @@ jobs:
           fi
           echo "Resolved cluster location: ${LOC}"
           echo "GKE_LOCATION=${LOC}" >> "$GITHUB_ENV"
+          echo "Debug: will use cluster='${{ secrets.GKE_CLUSTER }}' location='${LOC}' project='${{ secrets.GCP_PROJECT }}'"
 
       - name: Configure kubectl (k8s)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_method == 'k8s' }}
