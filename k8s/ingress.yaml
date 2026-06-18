@@ -3,6 +3,8 @@ kind: Ingress
 metadata:
   name: nagp26-app
   namespace: nagp26
+  annotations:
+    kubernetes.io/ingress.class: "gce"
 spec:
   ingressClassName: gce
   rules:
