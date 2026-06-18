@@ -68,11 +68,38 @@ jobs:
           echo "Listing GKE clusters in project/zone for quick verification..."
           gcloud container clusters list --project="${{ secrets.GCP_PROJECT }}" --zone="${{ secrets.GKE_ZONE }}" || true
 
-      - name: Configure kubectl
+      # Helm path keeps using the provided zone secret as-is.
+      - name: Configure kubectl (Helm)
+        if: ${{ github.event_name == 'push' || inputs.deploy_method == 'helm' }}
         uses: google-github-actions/get-gke-credentials@v2
         with:
           cluster_name: ${{ secrets.GKE_CLUSTER }}
           location: ${{ secrets.GKE_ZONE }}
+          project_id: ${{ secrets.GCP_PROJECT }}
+
+      # Raw k8s path: resolve the actual cluster location automatically to avoid
+      # zone/region mismatches causing "not found: projects/.../locations/.../clusters/..."
+      - name: Resolve GKE location (k8s)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_method == 'k8s' }}
+        run: |
+          set -eu
+          echo "Resolving location for cluster '${{ secrets.GKE_CLUSTER }}' in project '${{ secrets.GCP_PROJECT }}'..."
+          LOC=$(gcloud container clusters list --project="${{ secrets.GCP_PROJECT }}" --format="value(name,location)" | awk '$1=="${{ secrets.GKE_CLUSTER }}" {print $2; exit}')
+          if [ -z "${LOC:-}" ]; then
+            echo "ERROR: Could not find cluster '${{ secrets.GKE_CLUSTER }}' in project '${{ secrets.GCP_PROJECT }}'."
+            echo "Available clusters:"
+            gcloud container clusters list --project="${{ secrets.GCP_PROJECT }}" || true
+            exit 1
+          fi
+          echo "Resolved cluster location: ${LOC}"
+          echo "GKE_LOCATION=${LOC}" >> "$GITHUB_ENV"
+
+      - name: Configure kubectl (k8s)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_method == 'k8s' }}
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ secrets.GKE_CLUSTER }}
+          location: ${{ env.GKE_LOCATION }}
           project_id: ${{ secrets.GCP_PROJECT }}
 
       - name: Prepare Helm release resources
