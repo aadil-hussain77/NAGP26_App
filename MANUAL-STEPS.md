@@ -47,17 +47,14 @@ Required by `.github/workflows/deploy.yaml`:
 
 Required (for DB credentials; used to create the Kubernetes Secret automatically in the pipeline):
 
-- **SQL_DB_USER** (example: `nagpUser`)
-- **SQL_DB_PASSWORD** (example: `Password@12345`)
+- **SQL_DB_USER** (example: `newUser`)
+- **SQL_DB_PASSWORD** (example: `MyPassword@123`)
 
 ## 4) One-time: Decide the exposure URL and DNS
 
 You are using **GCE/GKE Ingress** class.
 
-- Helm Ingress host default: `employees-api.nagap26.com` (from `helm/nagp26-api/values.yaml`)
-- Raw k8s Ingress host default: `nagp26.local` (from `k8s/ingress.yaml`)
-
-For the cleanest demo on GKE, prefer using a real DNS host (example: `employees-api.<your-domain>`):
+-For simplest testing, use hostless routing and access via the Ingress IP.
 
 - After the first deploy, get the Ingress external IP:
   - `kubectl -n <namespace> get ingress`
@@ -121,9 +118,9 @@ Expected:
 
 ## 8) Access the application
 
-- Open the host you configured:
-  - `http://<your-host>/` (Employees page)
-  - `http://<your-host>/api/employees` (API)
+- Open the Ingress endpoint:
+  - UI: `http://<INGRESS_IP>/Employees`
+  - API: `http://<INGRESS_IP>/api/employees`
 
 Note:
 - The application listens on container port **8080** (non-root), while the Kubernetes Service is exposed on port **80** and forwards to **8080**.

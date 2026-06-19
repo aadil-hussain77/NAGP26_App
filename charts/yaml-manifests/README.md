@@ -1,16 +1,7 @@
-This folder contains plain Kubernetes YAML manifests for deploying the API and in-cluster SQL Server StatefulSet.
-Files:
-- namespace.yaml
-- sql-secret.yaml (example) - contains placeholders
-- db-config.yaml
-- api-deployment.yaml
-- api-service.yaml
-- api-ingress.yaml
-- sql-statefulset.yaml
-- sql-service.yaml
-- db-init-configmap.yaml
-- db-init-job.yaml
-- networkpolicy.yaml
-- pdb-api.yaml
-- hpa-api.yaml
-- cronjob-backup.yaml (optional)
+This folder contains an alternate set of plain Kubernetes YAML manifests.
+
+Source of truth for raw Kubernetes deployment in this repo is `k8s/`.
+
+If you use these manifests:
+- Ensure namespaces match (`nagp26`)
+- Do not apply placeholder Secret YAML (create `sql-credentials` at deploy time)

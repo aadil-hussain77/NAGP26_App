@@ -8,30 +8,44 @@ This is a Razor Pages single-page application that lists employees and supports 
 - **Service API URL (Ingress)**: <ADD_INGRESS_URL>
 - **Screen recording URL** (objects + API call + self-heal + persistence): <ADD_VIDEO_URL>
 
-## Requirement understanding (from the assignment PDF)
+## Requirement understanding
 - **Service/API tier**: externally exposed via **Ingress**, **4 pods**, rolling updates, self-healing, HPA, CPU/memory requests+limits.
 - **Database tier**: **1 pod**, internal-only (ClusterIP), persistent storage, recovers after pod deletion.
 - **Config & secrets**: DB host/name/user via **ConfigMap**; DB password via **Secret** and **not clearly visible in any Kubernetes YAML**.
 - **Connectivity**: communicate via **Service DNS**, not Pod IPs.
 
 ## Assumptions
-- You have an Ingress Controller installed in your cluster (e.g., nginx).
-- A default StorageClass exists for PVC provisioning.
+- You are deploying to **GKE** and using **GCE Ingress** (`ingressClassName: gce`).
+- A default `StorageClass` exists for PVC provisioning.
 
 ## Solution overview
 - **API**: .NET (Razor Pages + Minimal APIs) with EF Core DbContext pooling and readiness/liveness probes.
 - **DB**: SQL Server container with PVC-backed `/var/opt/mssql` storage.
-- **Kubernetes**: raw manifests in `k8s/` (Deployment, Service, Ingress, HPA, ConfigMap, PVC).
+- **Kubernetes**:
+  - **Helm chart** in `helm/nagp26-api/`
+  - **Raw manifests** in `k8s/`
 
 Run locally:
 - Set connection string in `appsettings.Development.json` or user secrets named `DefaultConnection`.
 - dotnet run
 
-Container & Kubernetes:
-- Build image: `docker build -t nagp26_app:latest .`
-- Create the DB password secret (do not commit the real password in YAML):
-  - `kubectl -n nagp26 create secret generic sql-credentials --from-literal=DB_USER='<DB_USER>' --from-literal=DB_PASSWORD='<DB_PASSWORD>' --from-literal=SA_PASSWORD='<SA_PASSWORD>' --dry-run=client -o yaml | kubectl apply -f -`
-- Apply k8s manifests: `kubectl apply -f k8s/` (ensure namespace `nagp26` exists first, or create it)
+## Deploy (raw Kubernetes manifests)
+
+```bash
+kubectl create namespace nagp26 --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl -n nagp26 create secret generic sql-credentials \
+  --from-literal=DB_USER='<DB_USER>' \
+  --from-literal=DB_PASSWORD='<DB_PASSWORD>' \
+  --from-literal=SA_PASSWORD='<SA_PASSWORD>' \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl apply -f k8s/
+```
+
+Access:
+- UI: `http://<INGRESS_IP>/Employees`
+- API: `http://<INGRESS_IP>/api/employees`
 
 Design notes:
 - EF Core with DbContext pooling
@@ -41,11 +55,6 @@ Design notes:
 - Database is ClusterIP only
 - HPA configured for the deployment
 - Liveness and readiness probes added
-
-## FinOps (cost optimization opportunities)
-- **Right-size resources**: start with low requests/limits on API, then adjust using observed CPU/memory metrics.
-- **Autoscaling**: keep HPA enabled to avoid over-provisioning during low traffic.
-- **Reduce database cost**: use the smallest viable storage size and avoid over-allocating CPU/memory to the DB pod.
 
 ## Demo checklist (for the screen recording)
 - `kubectl get all,ingress,hpa,configmap,secret,pvc`
