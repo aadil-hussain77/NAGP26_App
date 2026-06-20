@@ -3,9 +3,10 @@
 This is a Razor Pages single-page application that lists employees and supports CRUD via a minimal API.
 
 ## Assignment deliverables
-- **Code repository URL**: <ADD_REPO_URL>
-- **Docker Hub image URL**: <ADD_DOCKER_HUB_URL>
-- **Service API URL (Ingress)**: <ADD_INGRESS_URL>
+- **Code repository URL**: https://github.com/aadil-hussain77/NAGP26_App.git
+- **Docker Hub image URL**: https://hub.docker.com/repository/docker/aadil77/nagp26-app
+- **Service API URL (Ingress)**: - UI: `http://<INGRESS_IP>/Employees`
+                                 - API: `http://<INGRESS_IP>/api/employees`
 - **Screen recording URL** (objects + API call + self-heal + persistence): <ADD_VIDEO_URL>
 
 ## Requirement understanding
@@ -55,6 +56,34 @@ Design notes:
 - Database is ClusterIP only
 - HPA configured for the deployment
 - Liveness and readiness probes added
+
+## FinOps (cost optimization)
+
+### CPU & memory requests/limits (implemented)
+- API tier requests/limits are defined in Kubernetes manifests and Helm values.
+
+### Opportunities to optimize Kubernetes cost
+- **Right-size requests/limits**: reduce over-provisioning by tuning API CPU/memory requests based on observed usage (and keep sensible limits to avoid noisy-neighbor issues).
+- **Autoscaling strategy**: keep HPA enabled and set `maxReplicas` to a value that matches expected peak; avoid permanently running more than the baseline 4 pods if load is low.
+- **Database sizing**: “This solution uses StatefulSet+PVC to meet the assignment. 
+                      -In a production-equivalent FinOps approach, we’d typically move the DB to a managed service and keep GKE for the stateless API.
+- **Image + rollout efficiency**: deploy immutable tags (commit SHA) to avoid re-pulling `latest` and reduce churn/time-to-ready during deployments.
+
+### Implement resource optimization using observed metrics (how to demonstrate)
+1) Observe live usage:
+
+```bash
+kubectl -n nagp26 top pods
+kubectl -n nagp26 top nodes
+kubectl -n nagp26 describe hpa nagp26-app-hpa
+```
+
+2) Tune API tier requests/limits using what you saw:
+- Set **CPU request** close to typical steady-state usage per pod (with headroom).
+- Set **memory request** close to steady-state usage (with headroom).
+- Keep **limits** high enough to handle spikes but low enough to protect the node.
+
+In the demo video, capture the `kubectl top` output and show the chosen requests/limits in the Deployment YAML to prove the optimization is based on observed metrics.
 
 ## Demo checklist (for the screen recording)
 - `kubectl get all,ingress,hpa,configmap,secret,pvc`

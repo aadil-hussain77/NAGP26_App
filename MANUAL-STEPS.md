@@ -69,7 +69,7 @@ The pipeline automatically creates/updates the Kubernetes Secret named **`sql-cr
 
 Notes:
 - You do **not** need to manually apply a Secret manifest or run `kubectl create secret` from your laptop.
-- Do **NOT** commit real passwords in any YAML in the repository.
+- No real passwords commited in any YAML in the repository.
 
 ## 6A) Deploy using GitHub Actions (Helm path)
 
@@ -125,7 +125,7 @@ Expected:
 Note:
 - The application listens on container port **8080** (non-root), while the Kubernetes Service is exposed on port **80** and forwards to **8080**.
 
-## 9) Demo checklist (assignment recording)
+## 9) Demo checklist
 
 - Show objects:
   - `kubectl get all -n <namespace>`

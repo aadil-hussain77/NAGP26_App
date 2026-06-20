@@ -25,7 +25,10 @@ spec:
             - name: ASPNETCORE_URLS
               value: "http://+:8080"
             - name: DB_SERVER
-              value: "nagp26-sql"
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: DB_SERVER
             - name: DB_NAME
               valueFrom:
                 configMapKeyRef:
