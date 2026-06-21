@@ -7,6 +7,7 @@ This is a Razor Pages single-page application that lists employees and supports 
 - **Docker Hub image URL**: https://hub.docker.com/repository/docker/aadil77/nagp26-app
 - **Service API URL (Ingress)**: - UI: `http://<INGRESS_IP>/Employees`
                                  - API: `http://<INGRESS_IP>/api/employees`
+                                 - health: `http://<INGRESS_IP>/healthz`
 - **Screen recording URL** (objects + API call + self-heal + persistence): <ADD_VIDEO_URL>
 
 ## Requirement understanding
