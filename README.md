@@ -31,19 +31,8 @@ Run locally:
 - Set connection string in `appsettings.Development.json` or user secrets named `DefaultConnection`.
 - dotnet run
 
-## Deploy (raw Kubernetes manifests)
-
-```bash
-kubectl create namespace nagp26 --dry-run=client -o yaml | kubectl apply -f -
-
-kubectl -n nagp26 create secret generic sql-credentials \
-  --from-literal=DB_USER='<DB_USER>' \
-  --from-literal=DB_PASSWORD='<DB_PASSWORD>' \
-  --from-literal=SA_PASSWORD='<SA_PASSWORD>' \
-  --dry-run=client -o yaml | kubectl apply -f -
-
-kubectl apply -f k8s/
-```
+## Deploy
+Check MANUAL-STEPS.md for detailed instructions on deploying to GKE and setting up GitHub Actions.
 
 Access:
 - UI: `http://<INGRESS_IP>/Employees`
@@ -83,8 +72,6 @@ kubectl -n nagp26 describe hpa nagp26-app-hpa
 - Set **CPU request** close to typical steady-state usage per pod (with headroom).
 - Set **memory request** close to steady-state usage (with headroom).
 - Keep **limits** high enough to handle spikes but low enough to protect the node.
-
-In the demo video, capture the `kubectl top` output and show the chosen requests/limits in the Deployment YAML to prove the optimization is based on observed metrics.
 
 ## Demo checklist (for the screen recording)
 - `kubectl get all,ingress,hpa,configmap,secret,pvc`
