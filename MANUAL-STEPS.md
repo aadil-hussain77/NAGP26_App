@@ -58,7 +58,6 @@ You are using **GCE/GKE Ingress** class.
 
 - After the first deploy, get the Ingress external IP:
   - `kubectl -n <namespace> get ingress`
-- Create a DNS **A record** pointing the host to that external IP.
 
 ## 5) Secrets handling (no manual cluster step)
 
