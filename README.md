@@ -8,7 +8,7 @@ This is a Razor Pages single-page application that lists employees and supports 
 - **Service API URL (Ingress)**: - UI: `http://<INGRESS_IP>/Employees`
                                  - API: `http://<INGRESS_IP>/api/employees`
                                  - health: `http://<INGRESS_IP>/healthz`
-- **Screen recording URL** (objects + API call + self-heal + persistence): <ADD_VIDEO_URL>
+- **Screen recording URL** (objects + API call + self-heal + persistence): https://nagarro-my.sharepoint.com/:v:/p/aadil_hussain/IQCF6zq09AwoQ5HuJDK8DcjwATyLMllulznvfMX5Ie8-AK4?e=AoNXdc&nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D
 
 ## Requirement understanding
 - **Service/API tier**: externally exposed via **Ingress**, **4 pods**, rolling updates, self-healing, HPA, CPU/memory requests+limits.
